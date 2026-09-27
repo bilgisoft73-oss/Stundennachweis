@@ -684,39 +684,43 @@ function recalcEditor(){
  let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
  let t=totals(o,selectedDay||1);fdTotal.textContent=fmt(t.fd);sdTotal.textContent=fmt(t.sd);dayTotal.textContent=fmt(t.total);soTotal.textContent=fmt(t.so);fdTotalInput.textContent=fmt(t.fd);sdTotalInput.textContent=fmt(t.sd);
 }
-document.querySelectorAll("[data-f]").forEach(x=>{x.addEventListener("input",recalcEditor);if(x.tagName==="INPUT"&&["fdFrom","fdTo","sdFrom","sdTo","pause"].includes(x.dataset.f))x.addEventListener("blur",()=>{x.value=norm(x.value);recalcEditor()})});
-
-function collectEditorData(){
+let dayAutoSaveTimer=null;
+function collectDayForm(){
   let o={};
   document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
   return o;
 }
-let editorAutoSaveTimer=null;
-async function saveCurrentEditor(){
+function queueDayAutoSave(){
   if(selectedDay==null || !currentUser) return;
-  clearTimeout(editorAutoSaveTimer);
-  const saveYear=year, saveMonth=month, saveDayNumber=selectedDay;
-  const o=collectEditorData();
-  await saveWorkEntry(saveDayNumber,o,saveYear,saveMonth);
-  db[`${saveYear}-${pad(saveMonth+1)}-${pad(saveDayNumber)}`]=o;
-}
-function scheduleEditorAutoSave(){
-  if(selectedDay==null || !currentUser) return;
-  clearTimeout(editorAutoSaveTimer);
-  editorAutoSaveTimer=setTimeout(()=>saveCurrentEditor().catch(e=>alert("Speichern fehlgeschlagen: "+e.message)),700);
+  clearTimeout(dayAutoSaveTimer);
+  dayAutoSaveTimer=setTimeout(()=>saveCurrentDay(false),700);
 }
 document.querySelectorAll("[data-f]").forEach(x=>{
-  x.addEventListener("input",scheduleEditorAutoSave);
-  x.addEventListener("change",scheduleEditorAutoSave);
+  x.addEventListener("input",()=>{recalcEditor();queueDayAutoSave()});
+  x.addEventListener("change",queueDayAutoSave);
+  if(x.tagName==="INPUT"&&["fdFrom","fdTo","sdFrom","sdTo","pause"].includes(x.dataset.f))
+    x.addEventListener("blur",()=>{x.value=norm(x.value);recalcEditor();queueDayAutoSave()});
 });
+
+async function saveCurrentDay(showError=true){
+  if(selectedDay==null) return true;
+  clearTimeout(dayAutoSaveTimer);
+  const d=selectedDay, y=year, m=month, o=collectDayForm();
+  try{
+    await saveWorkEntry(d,o,y,m);
+    db[`${y}-${pad(m+1)}-${pad(d)}`]=o;
+    render();
+    return true;
+  }catch(e){
+    if(showError) alert("Speichern fehlgeschlagen: "+e.message);
+    else console.error("Autosave fehlgeschlagen:",e);
+    return false;
+  }
+}
 async function moveEditorDay(delta){
   if(selectedDay==null) return;
-  try{
-    await saveCurrentEditor();
-  }catch(e){
-    alert("Speichern fehlgeschlagen: "+e.message);
-    return;
-  }
+  const ok=await saveCurrentDay(true);
+  if(!ok) return;
   let dt=new Date(Date.UTC(year,month,selectedDay));
   dt.setUTCDate(dt.getUTCDate()+delta);
   year=dt.getUTCFullYear();
@@ -728,7 +732,7 @@ async function moveEditorDay(delta){
 }
 prevDay.onclick=()=>moveEditorDay(-1);
 nextDay.onclick=()=>moveEditorDay(1);
-headerSaveDay.onclick=()=>saveDay.click();
+headerSaveDay.onclick=()=>saveCurrentDay(true);
 
 async function saveWorkEntry(day,o,saveYear=year,saveMonth=month){
   if(!currentUser) throw new Error("Nicht angemeldet");
@@ -743,7 +747,7 @@ async function saveWorkEntry(day,o,saveYear=year,saveMonth=month){
   const {error}=await supabaseClient.from("work_entries").upsert(row,{onConflict:"user_id,work_date"});
   if(error) throw error;
 }
-saveDay.onclick=async()=>{try{await saveCurrentEditor();sheet.classList.remove("open");render()}catch(e){alert("Speichern fehlgeschlagen: "+e.message)}};
+saveDay.onclick=()=>saveCurrentDay(true);
 async function persist(){
   const jobs=Object.entries(db).map(([date,o])=>{
     const [yy,mm,dd]=date.split("-").map(Number); const oy=year,om=month; year=yy;month=mm-1;
@@ -755,7 +759,7 @@ saveBtn.onclick=async()=>{
   try{await persist();
     const st=document.getElementById("mainSaveStatus");st.textContent="Gespeichert ✓";st.classList.add("show");clearTimeout(window._mainSaveTimer);window._mainSaveTimer=setTimeout(()=>st.classList.remove("show"),2200);
   }catch(e){alert("Speichern fehlgeschlagen: "+e.message)}
-}; closeSheet.onclick=async()=>{try{await saveCurrentEditor();sheet.classList.remove("open");render()}catch(e){alert("Speichern fehlgeschlagen: "+e.message)}};
+}; closeSheet.onclick=async()=>{const ok=await saveCurrentDay(true);if(ok)sheet.classList.remove("open")};
 prev.onclick=()=>{if(month===0){month=11;year--}else month--;populateMonths();render()};
 next.onclick=()=>{if(month===11){month=0;year++}else month++;populateMonths();render()};
 monthSelect.onchange=e=>{month=+e.target.value;render()};
@@ -815,7 +819,7 @@ function openPatientPicker(shift){
        const pick=document.querySelector(`.patient-pick[data-shift="${pickerShift}"]`);
        pid.value=p.id;
        if(pick) pick.textContent=p.name+" ▾";
-       patientPicker.classList.remove("open"); recalcEditor();
+       patientPicker.classList.remove("open"); recalcEditor(); queueDayAutoSave();
      };
      pickerList.appendChild(b);
    });
