@@ -530,7 +530,7 @@ body.login-locked{overflow:hidden!important}
 </div>
 
 <div class="app">
- <div class="top"><h1>Stundennachweis</h1><div class="topActions"><button class="iconbtn" id="patientsBtn" onclick="document.getElementById('patientMsg').textContent='';document.getElementById('newPatientName').value='';renderPatients();document.getElementById('patientsModal').classList.add('open');">👥 Patienten</button><button class="iconbtn" id="settingsBtn">⚙ Einstellungen</button></div></div>
+ <div class="top"><h1>Stundennachweis</h1><div class="topActions"><button class="iconbtn" id="logoutBtn" type="button">↪ Abmelden</button><button class="iconbtn" id="patientsBtn" onclick="document.getElementById('patientMsg').textContent='';document.getElementById('newPatientName').value='';renderPatients();document.getElementById('patientsModal').classList.add('open');">👥 Patienten</button><button class="iconbtn" id="settingsBtn">⚙ Einstellungen</button></div></div>
  <div class="monthbar"><button class="iconbtn" id="prev">‹</button><select id="monthSelect"></select><button class="iconbtn" id="next">›</button></div>
  <div class="week"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
  <div class="calendar" id="calendar"></div>
@@ -944,6 +944,28 @@ window.addEventListener("afterprint",()=>{document.body.classList.remove("detail
 
 
 <script id="login-code-v30">
+// Abmelden + automatische Abmeldung nach 5 Minuten Inaktivität
+const AUTO_LOGOUT_MS=5*60*1000;
+let autoLogoutTimer=null;
+async function logoutUser(){
+ clearTimeout(autoLogoutTimer);
+ try{ await supabaseClient.auth.signOut(); }catch(e){ console.error("Abmelden fehlgeschlagen:",e); }
+ currentUser=null; db={}; patients=[]; settings={employee:"",payGroup:""};
+ document.querySelectorAll(".sheet.open,.settings.open,.patient-modal.open").forEach(x=>x.classList.remove("open"));
+ const screen=document.getElementById("loginScreen");
+ if(screen) screen.style.display="flex";
+ document.body.classList.add("login-locked");
+ const pass=document.getElementById("loginPass"); if(pass) pass.value="";
+ const err=document.getElementById("loginError"); if(err) err.textContent="";
+}
+function resetAutoLogout(){
+ if(!currentUser) return;
+ clearTimeout(autoLogoutTimer);
+ autoLogoutTimer=setTimeout(logoutUser,AUTO_LOGOUT_MS);
+}
+document.getElementById("logoutBtn")?.addEventListener("click",logoutUser);
+["pointerdown","keydown","touchstart","scroll"].forEach(ev=>document.addEventListener(ev,resetAutoLogout,{passive:true}));
+
 async function loadCloudData(){
  const [{data:ps,error:pe},{data:we,error:ee},{data:us,error:se}]=await Promise.all([
   supabaseClient.from("patients").select("id,name").order("name"),
@@ -960,7 +982,7 @@ async function loadCloudData(){
  const screen=document.getElementById("loginScreen"),form=document.getElementById("loginForm"),user=document.getElementById("loginUser"),pass=document.getElementById("loginPass"),err=document.getElementById("loginError");
  document.body.classList.add("login-locked");
  document.querySelector('label[for="loginUser"]').textContent="E-Mail";user.type="email";user.autocomplete="username";
- async function enter(session){currentUser=session.user;await loadCloudData();screen.style.display="none";document.body.classList.remove("login-locked")}
+ async function enter(session){currentUser=session.user;await loadCloudData();screen.style.display="none";document.body.classList.remove("login-locked");resetAutoLogout()}
  supabaseClient.auth.getSession().then(async({data})=>{if(data.session){try{await enter(data.session)}catch(e){console.error("Supabase load error:",e);err.textContent="Supabase-Fehler: "+(e?.message||String(e));}}});
  form.addEventListener("submit",async e=>{e.preventDefault();err.textContent="Anmeldung…";const {data,error}=await supabaseClient.auth.signInWithPassword({email:user.value.trim(),password:pass.value});if(error){err.textContent="E-Mail oder Passwort ist falsch.";pass.value="";return}try{await enter(data.session);err.textContent=""}catch(x){err.textContent="Daten konnten nicht geladen werden: "+x.message}});
 })();
