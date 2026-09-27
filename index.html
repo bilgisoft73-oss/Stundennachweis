@@ -961,7 +961,7 @@ async function loadCloudData(){
  document.body.classList.add("login-locked");
  document.querySelector('label[for="loginUser"]').textContent="E-Mail";user.type="email";user.autocomplete="username";
  async function enter(session){currentUser=session.user;await loadCloudData();screen.style.display="none";document.body.classList.remove("login-locked")}
- supabaseClient.auth.getSession().then(async({data})=>{if(data.session){try{await enter(data.session)}catch(e){err.textContent="Daten konnten nicht geladen werden."}}});
+ supabaseClient.auth.getSession().then(async({data})=>{if(data.session){try{await enter(data.session)}catch(e){console.error("Supabase load error:",e);err.textContent="Supabase-Fehler: "+(e?.message||String(e));}}});
  form.addEventListener("submit",async e=>{e.preventDefault();err.textContent="Anmeldung…";const {data,error}=await supabaseClient.auth.signInWithPassword({email:user.value.trim(),password:pass.value});if(error){err.textContent="E-Mail oder Passwort ist falsch.";pass.value="";return}try{await enter(data.session);err.textContent=""}catch(x){err.textContent="Daten konnten nicht geladen werden: "+x.message}});
 })();
 </script>
