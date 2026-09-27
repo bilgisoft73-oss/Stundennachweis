@@ -602,7 +602,7 @@ body.login-locked{overflow:hidden!important}
  <div class="field"><label>Name des Mitarbeiters</label><input id="employeeName"></div>
  <div class="field" style="margin-top:12px"><label id="payGroupLabel">Lohngruppe</label><input id="payGroup"></div>
  
- <input type="hidden" id="languageSelect" value="de"><button class="btn primary" id="saveSettings" style="margin-top:16px;width:100%">Speichern</button>
+ <button class="btn primary" id="saveSettings" style="margin-top:16px;width:100%">Speichern</button>
 </div></div>
 
 <div id="printPage"></div><div id="detailPrintPage"></div>
@@ -618,7 +618,7 @@ const wd=["So","Mo","Di","Mi","Do","Fr","Sa"];
 const holidays2026=["2026-01-01","2026-04-03","2026-04-06","2026-05-01","2026-05-14","2026-05-25","2026-10-03","2026-12-25","2026-12-26"];
 let year=2026, month=8, selectedDay=null;
 let db={};
-let settings={employee:"",payGroup:"",language:"de"};
+let settings={employee:"",payGroup:""};
 let patients=[];
 let pickerShift=null;
 
@@ -676,7 +676,7 @@ function openDay(d){
    const pid=o[sh+"PatientId"]||"";
    const p=patients.find(x=>x.id===pid);
    const pick=document.querySelector(`.patient-pick[data-shift="${sh}"]`);
-   if(pick) pick.textContent=(p?p.name:((LANG[settings.language||"de"]||LANG.de).pickPatient))+" ▾";
+   if(pick) pick.textContent=(p?p.name:"Patient")+" ▾";
  });
  recalcEditor(); sheet.classList.add("open");
 }
@@ -730,9 +730,9 @@ saveBtn.onclick=async()=>{
 prev.onclick=()=>{if(month===0){month=11;year--}else month--;populateMonths();render()};
 next.onclick=()=>{if(month===11){month=0;year++}else month++;populateMonths();render()};
 monthSelect.onchange=e=>{month=+e.target.value;render()};
-settingsBtn.onclick=()=>{employeeName.value=settings.employee||"";payGroup.value=settings.payGroup||"";languageSelect.value="de";document.getElementById("settings").classList.add("open")};
+settingsBtn.onclick=()=>{employeeName.value=settings.employee||"";payGroup.value=settings.payGroup||"";document.getElementById("settings").classList.add("open")};
 closeSettings.onclick=()=>document.getElementById("settings").classList.remove("open");
-saveSettings.onclick=async()=>{settings={employee:employeeName.value.trim(),payGroup:payGroup.value.trim(),language:"de"};const {error}=await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,employee_name:settings.employee,pay_group:settings.payGroup,updated_at:new Date().toISOString()});if(error){alert("Speichern fehlgeschlagen: "+error.message);return}applyLanguage();document.getElementById("settings").classList.remove("open")};
+saveSettings.onclick=async()=>{settings={employee:employeeName.value.trim(),payGroup:payGroup.value.trim()};const {error}=await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,employee_name:settings.employee,pay_group:settings.payGroup,updated_at:new Date().toISOString()});if(error){alert("Speichern fehlgeschlagen: "+error.message);return}document.getElementById("settings").classList.remove("open")};
 
 
 function persistPatients(){
@@ -937,30 +937,6 @@ document.getElementById("pdfDetailBtn").onclick=()=>{
 window.addEventListener("afterprint",()=>{document.body.classList.remove("detail-print");const st=document.getElementById("runtimePageStyle");if(st)st.remove()});
 
 
-const LANG={
- de:{app:"Stundennachweis",set:"⚙ Einstellungen",patients:"👥 Patienten",pickPatient:"Patient",pdf:"PDF erstellen",save:"Speichern",early:"Frühdienst (FD)",late:"Spätdienst (SD)",from:"Von",to:"Bis",desc:"Beschreibung",pause:"Pause",total:"Tagesgesamt",daySave:"Tag speichern",headSave:"Speichern",setTitle:"Einstellungen",emp:"Name des Mitarbeiters",group:"Lohngruppe",lang:"Sprache",monthly:"Gesamtstunden im Monat"},
- en:{app:"Timesheet",set:"⚙ Settings",patients:"👥 Patients",pickPatient:"Patient",pdf:"Create PDF",save:"Save",early:"Early Shift (FD)",late:"Late Shift (SD)",from:"From",to:"To",desc:"Description",pause:"Break",total:"Daily Total",daySave:"Save Day",headSave:"Save",setTitle:"Settings",emp:"Employee Name",group:"Pay Group",lang:"Language",monthly:"Total hours this month"},
- fa:{app:"ثبت ساعات کاری",set:"⚙ تنظیمات",patients:"👥 بیماران",pickPatient:"بیمار",pdf:"ساخت PDF",save:"ذخیره",early:"شیفت صبح (FD)",late:"شیفت عصر (SD)",from:"از",to:"تا",desc:"توضیحات",pause:"استراحت",total:"جمع کل روز",daySave:"ذخیره روز",headSave:"ذخیره",setTitle:"تنظیمات",emp:"نام کارمند",group:"گروه حقوقی",lang:"زبان",monthly:"جمع ساعات ماه"}
-};
-function applyLanguage(){
- const L=LANG.de;
- const appTitle=document.querySelector(".app h1"); if(appTitle)appTitle.textContent=L.app;
- settingsBtn.textContent=L.set; patientsBtn.textContent=L.patients; pdfBtn.textContent=L.pdf; saveBtn.textContent=L.save; document.querySelectorAll(".patient-pick").forEach(b=>b.textContent=L.pickPatient);
- const cards=document.querySelectorAll(".shift-fd,.shift-sd");
- if(cards[0])cards[0].querySelector("b").textContent=L.early;
- if(cards[1])cards[1].querySelector("b").textContent=L.late;
- const times=document.querySelectorAll(".inline-time");
- times.forEach((el,i)=>{const s=el.querySelector("span");if(s)s.textContent=(i%2===0?L.from:L.to)});
- document.querySelectorAll(".shift-fd label,.shift-sd label").forEach(el=>el.textContent=L.desc);
- const p=document.querySelector(".triple-row .inline-small span"); if(p)p.textContent=L.pause;
- const total=document.querySelector(".day-total-only>div");
- if(total){const b=total.querySelector("b"); total.childNodes[0].nodeValue=L.total; if(b)total.appendChild(b);}
- saveDay.textContent=L.daySave; headerSaveDay.textContent=L.headSave;
- const st=document.querySelector("#settings h2");if(st)st.textContent=L.setTitle;
- const emp=employeeName.closest(".field").querySelector("label");if(emp)emp.textContent=L.emp;
- payGroupLabel.textContent=L.group;languageLabel.textContent=L.lang;
- document.documentElement.dir="ltr";
-}
 
 </script>
 
@@ -977,8 +953,8 @@ async function loadCloudData(){
  if(pe||ee||se) throw (pe||ee||se);
  patients=ps||[]; db={};
  (we||[]).forEach(r=>{db[r.work_date]={fdFrom:r.fd_from?String(r.fd_from).slice(0,5):"",fdTo:r.fd_to?String(r.fd_to).slice(0,5):"",fdPatientId:r.fd_patient_id||"",fdNote:r.fd_description||"",sdFrom:r.sd_from?String(r.sd_from).slice(0,5):"",sdTo:r.sd_to?String(r.sd_to).slice(0,5):"",sdPatientId:r.sd_patient_id||"",sdNote:r.sd_description||"",pause:r.pause_minutes?fmt(r.pause_minutes):"",ft:r.ft||"",rb:r.rb||""}});
- settings={employee:us?.employee_name||"",payGroup:us?.pay_group||"",language:"de"};
- populateMonths();render();applyLanguage();
+ settings={employee:us?.employee_name||"",payGroup:us?.pay_group||""};
+ populateMonths();render();
 }
 (function(){
  const screen=document.getElementById("loginScreen"),form=document.getElementById("loginForm"),user=document.getElementById("loginUser"),pass=document.getElementById("loginPass"),err=document.getElementById("loginError");
