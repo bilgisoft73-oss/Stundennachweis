@@ -320,9 +320,6 @@ h1{font-size:22px;margin:0}.iconbtn,.btn,select,input,textarea{font:inherit}.ico
  .patient-pick{min-width:78px;font-size:12px}
 }
 @media print{.patient-modal{display:none!important}}
-
-.validation-error{display:none;margin-top:10px;padding:11px 12px;border:1px solid #e3a0a0;border-radius:10px;background:#fff0f0;color:#b42318;font-weight:700;font-size:14px;line-height:1.5}
-.validation-error.show{display:block}
 </style>
 
 
@@ -533,7 +530,7 @@ body.login-locked{overflow:hidden!important}
 </div>
 
 <div class="app">
- <div class="top"><h1>Stundennachweis</h1><div class="topActions"><button class="iconbtn" id="logoutBtn" type="button">↪ Abmelden</button><button class="iconbtn" id="patientsBtn" onclick="document.getElementById('patientMsg').textContent='';document.getElementById('newPatientName').value='';renderPatients();document.getElementById('patientsModal').classList.add('open');">👥 Patienten</button><button class="iconbtn" id="settingsBtn">⚙ Einstellungen</button></div></div>
+ <div class="top"><h1>Stundennachweis</h1><div class="topActions"><button class="iconbtn" id="patientsBtn" onclick="document.getElementById('patientMsg').textContent='';document.getElementById('newPatientName').value='';renderPatients();document.getElementById('patientsModal').classList.add('open');">👥 Patienten</button><button class="iconbtn" id="settingsBtn">⚙ Einstellungen</button></div></div>
  <div class="monthbar"><button class="iconbtn" id="prev">‹</button><select id="monthSelect"></select><button class="iconbtn" id="next">›</button></div>
  <div class="week"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
  <div class="calendar" id="calendar"></div>
@@ -585,7 +582,6 @@ body.login-locked{overflow:hidden!important}
  <div class="calcbox day-total-only"><div>Tagesgesamt<b id="dayTotal">00:00</b></div></div>
  <div style="display:none"><b id="fdTotal">00:00</b><b id="sdTotal">00:00</b><b id="soTotal">00:00</b></div>
  <button class="btn primary" id="saveDay" style="width:100%">Tag speichern</button>
- <div id="dayValidationError" class="validation-error" role="alert"></div>
 </div></div></div>
 
 
@@ -611,6 +607,7 @@ body.login-locked{overflow:hidden!important}
 
 <div id="printPage"></div><div id="detailPrintPage"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://vldpojrqcsonyvkucnbk.supabase.co";
@@ -653,21 +650,6 @@ function calendarPatientNames(o){
   });
   return names;
 }
-function missingPatientOrDescription(o,d){
- const t=totals(o,d);
- const missing=[];
- if(t.fd>0 && !String(o.fdPatientId||"").trim() && !String(o.fdNote||"").trim()) missing.push("FD");
- if(t.sd>0 && !String(o.sdPatientId||"").trim() && !String(o.sdNote||"").trim()) missing.push("SD");
- return missing;
-}
-function showDayValidation(o,d){
- const box=document.getElementById("dayValidationError");
- if(!box) return;
- const missing=missingPatientOrDescription(o,d);
- if(!missing.length){ box.textContent=""; box.classList.remove("show"); return; }
- box.innerHTML=missing.map(sh=>`${sh}: Bitte Patient oder Beschreibung eingeben.`).join("<br>");
- box.classList.add("show");
-}
 function render(){
  calendar.innerHTML=""; monthSelect.value=month;
  let first=new Date(Date.UTC(year,month,1)); let offset=(first.getUTCDay()+6)%7; let last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
@@ -680,8 +662,7 @@ function render(){
    if(dt.getUTCDay()===0)el.classList.add("sun"); if(holidays2026.includes(iso))el.classList.add("holiday");
    const hasEntered=Object.values(o).some(v=>String(v||"").trim()!=="");
    const missingPause=t.total>300 && !(mins(o.pause)>0);
-   const missingInfo=missingPatientOrDescription(o,d).length>0;
-   if(hasEntered){ el.classList.add((missingPause||missingInfo)?"invalid":"valid"); }
+   if(hasEntered){ el.classList.add(missingPause?"invalid":"valid"); }
    const patientNames=calendarPatientNames(o);
    el.innerHTML=`<div class="num">${d}</div><div class="hours">${t.total?fmt(t.total):""}</div>${patientNames.length?`<div class="patient-day-names">${patientNames.join("<br>")}</div>`:""}`;
    el.onclick=()=>openDay(d);calendar.appendChild(el);
@@ -698,53 +679,16 @@ function openDay(d){
    const pick=document.querySelector(`.patient-pick[data-shift="${sh}"]`);
    if(pick) pick.textContent=(p?p.name:"Patient")+" ▾";
  });
- recalcEditor();
- const validationBox=document.getElementById("dayValidationError");
- if(validationBox){validationBox.textContent="";validationBox.classList.remove("show");}
- sheet.classList.add("open");
+ recalcEditor(); sheet.classList.add("open");
 }
 function recalcEditor(){
  let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
  let t=totals(o,selectedDay||1);fdTotal.textContent=fmt(t.fd);sdTotal.textContent=fmt(t.sd);dayTotal.textContent=fmt(t.total);soTotal.textContent=fmt(t.so);fdTotalInput.textContent=fmt(t.fd);sdTotalInput.textContent=fmt(t.sd);
 }
-let dayAutoSaveTimer=null;
-function collectDayForm(){
-  let o={};
-  document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
-  return o;
-}
-function queueDayAutoSave(){
-  if(selectedDay==null || !currentUser) return;
-  clearTimeout(dayAutoSaveTimer);
-  dayAutoSaveTimer=setTimeout(()=>saveCurrentDay(false),700);
-}
-document.querySelectorAll("[data-f]").forEach(x=>{
-  x.addEventListener("input",()=>{recalcEditor();queueDayAutoSave()});
-  x.addEventListener("change",queueDayAutoSave);
-  if(x.tagName==="INPUT"&&["fdFrom","fdTo","sdFrom","sdTo","pause"].includes(x.dataset.f))
-    x.addEventListener("blur",()=>{x.value=norm(x.value);recalcEditor();queueDayAutoSave()});
-});
+document.querySelectorAll("[data-f]").forEach(x=>{x.addEventListener("input",recalcEditor);if(x.tagName==="INPUT"&&["fdFrom","fdTo","sdFrom","sdTo","pause"].includes(x.dataset.f))x.addEventListener("blur",()=>{x.value=norm(x.value);recalcEditor()})});
 
-async function saveCurrentDay(showError=true){
-  if(selectedDay==null) return true;
-  clearTimeout(dayAutoSaveTimer);
-  const d=selectedDay, y=year, m=month, o=collectDayForm();
-  try{
-    await saveWorkEntry(d,o,y,m);
-    db[`${y}-${pad(m+1)}-${pad(d)}`]=o;
-    render();
-    if(showError) showDayValidation(o,d);
-    return true;
-  }catch(e){
-    if(showError) alert("Speichern fehlgeschlagen: "+e.message);
-    else console.error("Autosave fehlgeschlagen:",e);
-    return false;
-  }
-}
-async function moveEditorDay(delta){
+function moveEditorDay(delta){
   if(selectedDay==null) return;
-  const ok=await saveCurrentDay(true);
-  if(!ok) return;
   let dt=new Date(Date.UTC(year,month,selectedDay));
   dt.setUTCDate(dt.getUTCDate()+delta);
   year=dt.getUTCFullYear();
@@ -756,11 +700,11 @@ async function moveEditorDay(delta){
 }
 prevDay.onclick=()=>moveEditorDay(-1);
 nextDay.onclick=()=>moveEditorDay(1);
-headerSaveDay.onclick=()=>saveCurrentDay(true);
+headerSaveDay.onclick=()=>saveDay.click();
 
-async function saveWorkEntry(day,o,saveYear=year,saveMonth=month){
+async function saveWorkEntry(day,o){
   if(!currentUser) throw new Error("Nicht angemeldet");
-  const date=`${saveYear}-${pad(saveMonth+1)}-${pad(day)}`;
+  const date=`${year}-${pad(month+1)}-${pad(day)}`;
   const pause=mins(o.pause)||0;
   const row={user_id:currentUser.id,work_date:date,
     fd_from:mins(o.fdFrom)==null?null:norm(o.fdFrom),fd_to:mins(o.fdTo)==null?null:norm(o.fdTo),
@@ -771,7 +715,7 @@ async function saveWorkEntry(day,o,saveYear=year,saveMonth=month){
   const {error}=await supabaseClient.from("work_entries").upsert(row,{onConflict:"user_id,work_date"});
   if(error) throw error;
 }
-saveDay.onclick=()=>saveCurrentDay(true);
+saveDay.onclick=async()=>{let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);try{await saveWorkEntry(selectedDay,o);db[key(selectedDay)]=o;sheet.classList.remove("open");render()}catch(e){alert("Speichern fehlgeschlagen: "+e.message)}};
 async function persist(){
   const jobs=Object.entries(db).map(([date,o])=>{
     const [yy,mm,dd]=date.split("-").map(Number); const oy=year,om=month; year=yy;month=mm-1;
@@ -783,7 +727,7 @@ saveBtn.onclick=async()=>{
   try{await persist();
     const st=document.getElementById("mainSaveStatus");st.textContent="Gespeichert ✓";st.classList.add("show");clearTimeout(window._mainSaveTimer);window._mainSaveTimer=setTimeout(()=>st.classList.remove("show"),2200);
   }catch(e){alert("Speichern fehlgeschlagen: "+e.message)}
-}; closeSheet.onclick=async()=>{const ok=await saveCurrentDay(true);if(ok)sheet.classList.remove("open")};
+}; closeSheet.onclick=()=>sheet.classList.remove("open");
 prev.onclick=()=>{if(month===0){month=11;year--}else month--;populateMonths();render()};
 next.onclick=()=>{if(month===11){month=0;year++}else month++;populateMonths();render()};
 monthSelect.onchange=e=>{month=+e.target.value;render()};
@@ -843,7 +787,7 @@ function openPatientPicker(shift){
        const pick=document.querySelector(`.patient-pick[data-shift="${pickerShift}"]`);
        pid.value=p.id;
        if(pick) pick.textContent=p.name+" ▾";
-       patientPicker.classList.remove("open"); recalcEditor(); queueDayAutoSave();
+       patientPicker.classList.remove("open"); recalcEditor();
      };
      pickerList.appendChild(b);
    });
@@ -926,8 +870,27 @@ function buildPrint(){
    </div>
  </div>`;
 }
+
+async function downloadPdfDirect(kind){
+ const detail=kind==="detail";
+ if(detail) buildDetailPrint(); else buildPrint();
+ const source=document.getElementById(detail?"detailPrintPage":"printPage");
+ const clone=source.cloneNode(true); clone.removeAttribute("id");
+ clone.style.cssText="display:block;position:static;margin:0;background:#fff;"+(detail?"width:285mm;":"width:202mm;padding:2mm;box-sizing:border-box;font-family:Arial,sans-serif;");
+ if(!detail){
+   const t=clone.querySelector(".pTable"),b=clone.querySelector(".pBottom"),i=clone.querySelector(".pInfo");
+   if(t)t.style.cssText+="width:87%;max-width:87%;margin:0 auto 0 0;";
+   if(b)b.style.width="87%"; if(i)i.style.width="87%";
+ }
+ const host=document.createElement("div");host.style.cssText="position:fixed;left:-100000px;top:0;background:#fff;z-index:-1;";host.appendChild(clone);document.body.appendChild(host);
+ const filename=`${detail?"Stundennachweis_Detail":"Stundennachweis"}_${monthNames[month]}_${year}.pdf`;
+ try{
+   await html2pdf().set({filename,margin:detail?[6,6,6,6]:[4,4,4,4],image:{type:"jpeg",quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:"#fff"},jsPDF:{unit:"mm",format:"a4",orientation:detail?"landscape":"portrait"},pagebreak:{mode:["css","legacy"]}}).from(clone).save();
+ }catch(e){alert("PDF-Download fehlgeschlagen: "+e.message)}finally{host.remove()}
+}
+
 function setPrintPageStyle(mode){let st=document.getElementById("runtimePageStyle");if(!st){st=document.createElement("style");st.id="runtimePageStyle";document.head.appendChild(st)}st.textContent=mode==="landscape"?"@media print{@page{size:A4 landscape!important;margin:6mm!important}}":"@media print{@page{size:A4 portrait!important;margin:4mm!important}}";}
-pdfBtn.onclick=()=>{document.body.classList.remove("detail-print");setPrintPageStyle("portrait");buildPrint();setTimeout(()=>window.print(),150)};
+pdfBtn.onclick=()=>downloadPdfDirect("normal");
 
 function patientNameById(id){
  const p=patients.find(x=>x.id===id);
@@ -988,9 +951,7 @@ function buildDetailPrint(){
 function escapeHtml(v){
  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
-document.getElementById("pdfDetailBtn").onclick=()=>{
- setPrintPageStyle("landscape");buildDetailPrint();document.body.classList.add("detail-print");setTimeout(()=>window.print(),150);
-};
+document.getElementById("pdfDetailBtn").onclick=()=>downloadPdfDirect("detail");
 window.addEventListener("afterprint",()=>{document.body.classList.remove("detail-print");const st=document.getElementById("runtimePageStyle");if(st)st.remove()});
 
 
@@ -1001,28 +962,6 @@ window.addEventListener("afterprint",()=>{document.body.classList.remove("detail
 
 
 <script id="login-code-v30">
-// Abmelden + automatische Abmeldung nach 5 Minuten Inaktivität
-const AUTO_LOGOUT_MS=5*60*1000;
-let autoLogoutTimer=null;
-async function logoutUser(){
- clearTimeout(autoLogoutTimer);
- try{ await supabaseClient.auth.signOut(); }catch(e){ console.error("Abmelden fehlgeschlagen:",e); }
- currentUser=null; db={}; patients=[]; settings={employee:"",payGroup:""};
- document.querySelectorAll(".sheet.open,.settings.open,.patient-modal.open").forEach(x=>x.classList.remove("open"));
- const screen=document.getElementById("loginScreen");
- if(screen) screen.style.display="flex";
- document.body.classList.add("login-locked");
- const pass=document.getElementById("loginPass"); if(pass) pass.value="";
- const err=document.getElementById("loginError"); if(err) err.textContent="";
-}
-function resetAutoLogout(){
- if(!currentUser) return;
- clearTimeout(autoLogoutTimer);
- autoLogoutTimer=setTimeout(logoutUser,AUTO_LOGOUT_MS);
-}
-document.getElementById("logoutBtn")?.addEventListener("click",logoutUser);
-["pointerdown","keydown","touchstart","scroll"].forEach(ev=>document.addEventListener(ev,resetAutoLogout,{passive:true}));
-
 async function loadCloudData(){
  const [{data:ps,error:pe},{data:we,error:ee},{data:us,error:se}]=await Promise.all([
   supabaseClient.from("patients").select("id,name").order("name"),
@@ -1039,8 +978,8 @@ async function loadCloudData(){
  const screen=document.getElementById("loginScreen"),form=document.getElementById("loginForm"),user=document.getElementById("loginUser"),pass=document.getElementById("loginPass"),err=document.getElementById("loginError");
  document.body.classList.add("login-locked");
  document.querySelector('label[for="loginUser"]').textContent="E-Mail";user.type="email";user.autocomplete="username";
- async function enter(session){currentUser=session.user;await loadCloudData();screen.style.display="none";document.body.classList.remove("login-locked");resetAutoLogout()}
- supabaseClient.auth.getSession().then(async({data})=>{if(data.session){try{await enter(data.session)}catch(e){console.error("Supabase load error:",e);err.textContent="Supabase-Fehler: "+(e?.message||String(e));}}});
+ async function enter(session){currentUser=session.user;await loadCloudData();screen.style.display="none";document.body.classList.remove("login-locked")}
+ supabaseClient.auth.getSession().then(async({data})=>{if(data.session){try{await enter(data.session)}catch(e){err.textContent="Daten konnten nicht geladen werden."}}});
  form.addEventListener("submit",async e=>{e.preventDefault();err.textContent="Anmeldung…";const {data,error}=await supabaseClient.auth.signInWithPassword({email:user.value.trim(),password:pass.value});if(error){err.textContent="E-Mail oder Passwort ist falsch.";pass.value="";return}try{await enter(data.session);err.textContent=""}catch(x){err.textContent="Daten konnten nicht geladen werden: "+x.message}});
 })();
 </script>
