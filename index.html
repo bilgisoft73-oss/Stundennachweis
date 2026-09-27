@@ -1,978 +1,596 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Stundennachweis</title>
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stundennachweis</title>
 <style>
-:root{--bg:#eef1f5;--card:#fff;--ink:#17191c;--muted:#6c727a;--line:#d7dbe0;--accent:#3157d5;--sun:#f4a900;--worked:#eaf0ff;--valid:#e4f6e7;--invalid:#fde5e5}
-*{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
-.app{max-width:980px;margin:auto;padding:16px}.top{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
-h1{font-size:22px;margin:0}.iconbtn,.btn,select,input,textarea{font:inherit}.iconbtn,.btn{border:0;border-radius:12px;background:#fff;padding:11px 14px;box-shadow:0 1px 5px #0001}.btn.primary{background:var(--accent);color:#fff}
-.monthbar{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-bottom:12px}.monthbar select{text-align:center;border:0;border-radius:12px;padding:12px;background:#fff}
-.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}.week div{text-align:center;font-size:12px;color:var(--muted);font-weight:700}
-.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{min-height:86px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:7px;position:relative;text-align:left}
-.day.empty{visibility:hidden}.day.sun,.day.holiday{border-color:#e6a600}.num{font-weight:700}.hours{font-size:12px;margin-top:12px;color:var(--accent);font-weight:700}.day.worked{background:var(--worked)}.day.valid{background:var(--valid);border-color:#8fc79a}.day.invalid{background:var(--invalid);border-color:#e2a0a0}
-.footerActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.sheet{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:20}.sheet.open{display:flex}.panel{background:#fff;width:100%;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px}.panelInner{max-width:700px;margin:auto}
-.panelhead{display:flex;justify-content:space-between;align-items:center}.panel h2{margin:0}
-.datehead{display:grid;grid-template-columns:42px minmax(100px,1fr) 42px auto 42px;gap:8px;align-items:center;margin-bottom:14px}
-.datehead h2{text-align:center;white-space:nowrap}
-.shift-fd{background:#eef5ff!important;border-color:#bfd4f5!important}
-.shift-sd{background:#fff3e8!important;border-color:#f2c79e!important}
-.shift-note{height:46px!important;min-height:46px!important;resize:vertical}
-.inline-time{display:grid;grid-template-columns:20px minmax(0,1fr);gap:2px;align-items:center}
-.inline-time>span{font-size:13px;font-weight:700;color:var(--muted)}
-.total-display{height:46px;border:1px solid var(--line);border-radius:10px;padding:11px;background:#f4f6f8;font-weight:700;text-align:center;display:flex;align-items:center;justify-content:center}
-.panel{background:#f4efff!important}
-.datehead .navday{background:#dbeafe!important;color:#2457b8!important;font-size:30px!important;font-weight:700!important;line-height:1!important;padding:5px 10px!important}
-.inline-small{display:grid;grid-template-columns:auto 1fr;gap:7px;align-items:center}
-.inline-small>span{font-size:13px;font-weight:700;color:var(--muted)}
-.inline-small input{min-width:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:12px;color:var(--muted);font-weight:700}.field input,.field textarea{border:1px solid var(--line);border-radius:10px;padding:11px;width:100%}.full{grid-column:1/-1}.calcbox{background:#f4f6f8;border-radius:12px;padding:12px;margin:12px 0;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.calcbox b{display:block;font-size:17px}
-.settings{position:fixed;inset:0;background:#fff;z-index:30;display:none;padding:20px}.settings.open{display:block}.settings .inner{max-width:600px;margin:auto}
-@media(max-width:600px){.app{padding:10px}.day{min-height:70px;padding:5px}.hours{font-size:10px;margin-top:9px}h1{font-size:19px}}
-/* PRINT: same geometry as the previously approved A4 timesheet. */
-#printPage{display:none}
+:root{--dark:#353633;--sub:#d2d3d0;--line:#30312e;--blue:#123cff;--red:#df1f2d;--sun:#f4a900}
+*{box-sizing:border-box}body{margin:0;background:#eee;font-family:Arial,sans-serif;color:#20211f}.page{width:1050px;margin:18px auto;background:#fff;padding:30px}
+h1{font-size:29px;margin:0 0 32px 28px;display:inline-block;border-bottom:2px solid;padding-bottom:6px}
+.info{display:grid;grid-template-columns:390px 300px 260px;gap:15px;margin-bottom:24px}.r{display:grid;grid-template-columns:130px 1fr;margin:0 0 12px;font-size:18px}.v{text-align:center;font-weight:bold}.under{border-bottom:2px solid;padding-bottom:3px}.blue{color:#1246c7}.red{color:#df1f2d}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:16px}th,td{border:1px solid var(--line);height:30px;text-align:center;padding:2px}thead tr:first-child th{background:var(--dark);color:#fff;font-size:17px}thead tr:nth-child(2) th{background:var(--sub)}.sunrow .d,.sunrow .date{background:var(--sun);color:#111;font-weight:bold}
+input{width:100%;border:0;outline:0;background:transparent;text-align:center;color:var(--blue);font:16px Arial}input:focus{background:#eef3ff}.calc{color:var(--blue)}tfoot td{border-top:2px solid;font-weight:bold}.sum{text-align:left;padding-left:60px;font-size:18px}
+.correct{font-size:18px;margin:25px 0 35px 15px}.sigs{display:grid;grid-template-columns:1fr 1fr;gap:120px;margin:0 120px 45px}.sig{border-top:2px solid;text-align:center;padding-top:6px;font-weight:bold}.legend{margin-left:8px}.legend div{display:flex;align-items:center;gap:8px}.sw{width:28px;height:22px;border:1px solid #777}.foot{margin:18px 8px}.actions{text-align:right;margin-top:20px}button{padding:9px 14px;margin-left:8px}
+.monthbar{display:flex;align-items:center;gap:12px;margin:0 0 22px 28px;padding:12px 15px;background:#f2f2f2;border:1px solid #bbb;width:max-content;border-radius:7px;font-size:17px;font-weight:700}
+.monthbar select{font:16px Arial;padding:7px 30px 7px 10px;border:1px solid #999;background:#fff}
+.holidayrow .d,.holidayrow .date{background:var(--sun);color:#111;font-weight:bold}
+@page{size:A4 portrait;margin:5mm}
 @media print{
- body>*:not(#printPage){display:none!important}
- #printPage{display:block!important}
- @page{size:A4 portrait;margin:4mm}
- html,body{margin:0!important;padding:0!important;width:100%!important;height:auto!important;overflow:visible!important}
- #printPage{
-   font-family:Arial,sans-serif;color:#20211f;
-   width:100%!important;max-width:100%!important;
-   margin:0!important;padding:2mm!important;box-sizing:border-box!important;
-   transform:scaleY(1.27)!important;transform-origin:top left!important;
- }
- .pTitle{text-align:center;font-weight:700;font-size:14px;margin:0 0 3mm}
- .pInfo{font-size:9px;display:grid;grid-template-columns:1fr 1fr;gap:1mm 5mm;margin-bottom:2mm}
- .pTable{
-   width:87%!important;max-width:87%!important;margin:0 auto 0 0!important;
-   border-collapse:collapse;table-layout:fixed;font-size:9px
- }
- .pTable th,.pTable td{
-   border:1px solid #30312e;text-align:center;padding:0 1px;
-   overflow:hidden;white-space:nowrap
- }
- .pTable thead tr:first-child th{background:#353633;color:#fff}
- .pTable thead tr:nth-child(2) th{background:#d2d3d0;color:#111}
- .pTable .sun,.pTable .holiday{background:#f4a900}
- .pTable .entered{color:#123cff}
- .pBottom{width:87%!important;font-size:8px;margin-top:2mm}
- .signs{display:flex;justify-content:space-between;margin-top:4mm}
- *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-}
-</style>
-
-<style id="editor-color-theme-v8">
-/* Entry dialog: compact, colorful, but still readable */
-.sheet .panel{
-  background:linear-gradient(180deg,#f3efff 0%,#eef4ff 100%)!important;
-}
-.sheet .panelInner{
-  background:#f8f6ff;
-  border:1px solid #ded5f3;
-  border-radius:18px 18px 0 0;
-  padding:12px;
-}
-.datehead{
-  background:#e8e2fa;
-  border:1px solid #d4c8ee;
-  border-radius:14px;
-  padding:7px;
-}
-.datehead h2{color:#33245f}
-.datehead .navday{
-  background:#cfe1ff!important;
-  color:#174d9f!important;
-  border:1px solid #aac9f6!important;
-  font-size:31px!important;
-}
-#closeSheet{
-  background:#ffe1e7!important;
-  color:#9c2741!important;
-  box-shadow:none!important;
-}
-
-/* Shift cards */
-.shift-fd{
-  background:#e8f3ff!important;
-  border-color:#a9ccef!important;
-}
-.shift-fd>b{color:#18558d}
-.shift-sd{
-  background:#fff0df!important;
-  border-color:#efc08c!important;
-}
-.shift-sd>b{color:#99521c}
-
-/* Make ALL editor controls shorter */
-.sheet input,
-.sheet textarea,
-.sheet .total-display{
-  height:38px!important;
-  min-height:38px!important;
-  padding:7px 9px!important;
-  border-radius:9px!important;
-}
-.sheet textarea.shift-note{
-  height:38px!important;
-  min-height:38px!important;
-  resize:vertical;
-}
-.sheet input{
-  background:#fff!important;
-}
-.shift-fd .total-display{
-  background:#d6eaff!important;
-  border-color:#a8caec!important;
-  color:#164f83;
-}
-.shift-sd .total-display{
-  background:#ffe0bd!important;
-  border-color:#e9b77f!important;
-  color:#8b4817;
-}
-
-/* Pause / FT / RB: same width and same field height */
-.sheet .triple-row{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:8px!important;
-}
-.sheet .triple-row .inline-small{
-  display:grid!important;
-  grid-template-columns:1fr!important;
-  gap:4px!important;
-  min-width:0!important;
-}
-.sheet .triple-row .inline-small>span{
-  text-align:center;
-  border-radius:8px;
-  padding:4px 2px;
-}
-.sheet .triple-row .inline-small:nth-child(1)>span{background:#e7dcff;color:#583c91}
-.sheet .triple-row .inline-small:nth-child(2)>span{background:#ffe8b9;color:#815a0a}
-.sheet .triple-row .inline-small:nth-child(3)>span{background:#dff3ea;color:#23684f}
-.sheet .triple-row input{
-  width:100%!important;
-  min-width:0!important;
-}
-
-/* Summary gets its own coordinated colors */
-.sheet .calcbox{
-  background:#e7e0f8!important;
-  border:1px solid #cfc1ed;
-  padding:9px!important;
-  gap:7px!important;
-}
-.sheet .calcbox>div{
-  border-radius:10px;
-  padding:8px;
-  font-size:12px;
-}
-.sheet .calcbox>div:nth-child(1){background:#dcecff;color:#174f84}
-.sheet .calcbox>div:nth-child(2){background:#ffe2c3;color:#8b4b19}
-.sheet .calcbox>div:nth-child(3){background:#ddf3e5;color:#226344}
-.sheet .calcbox>div:nth-child(4){background:#ffe0e6;color:#8b3146}
-.sheet .calcbox b{font-size:16px;margin-top:2px}
-
-/* Main save action */
-#saveDay{
-  background:linear-gradient(90deg,#5068d8,#7356c8)!important;
-  height:42px;
-}
-</style>
-
-<style>
-.sheet .calcbox.day-total-only{display:block!important}
-.sheet .calcbox.day-total-only>div{width:100%;text-align:center;background:#ddf3e5!important;color:#226344!important}
-</style>
-
-<style id="exact-approved-a4-print-v10">
-@media print {
-  @page { size:A4 portrait; margin:4mm !important; }
-
-  html,body{
-    margin:0!important;padding:0!important;width:100%!important;height:auto!important;
-    background:#fff!important;overflow:visible!important;
-  }
-  body>*:not(#printPage){display:none!important}
-  #printPage{
-    display:block!important;
-    width:100%!important;
+  html,body{margin:0!important;padding:0!important;background:#fff!important}
+  body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .monthbar,.actions{display:none!important}
+  .page{
     margin:0!important;
-    padding:2mm!important;
-    box-sizing:border-box!important;
-    color:#20211f!important;
-    font-family:Arial,sans-serif!important;
-    transform:scaleY(1.27)!important;
-    transform-origin:top left!important;
+    padding:4mm!important;
+    width:200mm!important;
+    min-height:0!important;
+    height:auto!important;
+    transform:none!important;
+    page-break-after:avoid!important;
+    break-after:avoid-page!important;
   }
-
-  .pTitle{
-    text-align:left!important;
-    font-size:13px!important;
-    font-weight:700!important;
-    margin:0 0 2mm 1mm!important;
+  h1{font-size:20px!important;margin:0 0 6mm 5mm!important;padding-bottom:2px!important}
+  .info{grid-template-columns:75mm 58mm 55mm!important;gap:2mm!important;margin-bottom:4mm!important}
+  .info .r,.r{font-size:11px!important;margin-bottom:2mm!important;grid-template-columns:31mm 1fr!important}
+  table{font-size:9px!important;page-break-inside:avoid!important;break-inside:avoid-page!important}
+  th,td{height:5.25mm!important;padding:0.3mm!important}
+  thead tr:first-child th{font-size:10px!important}
+  input{font-size:9px!important}
+  .correct{font-size:10px!important;margin:4mm 0 7mm 3mm!important}
+  .sigs{gap:20mm!important;margin:0 22mm 6mm!important;font-size:8px!important}
+  .sig{padding-top:1mm!important}
+  .legend{font-size:8px!important;margin-left:2mm!important}
+  .legend div{margin:0!important}
+  .sw{width:5mm!important;height:4mm!important}
+  .foot{font-size:8px!important;margin:4mm 2mm 0!important}
+  .sunrow .d,.sunrow .date,.holidayrow .d,.holidayrow .date{
+    background:#f4a900!important;
+    color:#111!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
   }
-  .pInfo{
-    width:87%!important;
-    display:grid!important;
-    grid-template-columns:1fr 1fr 1fr!important;
-    column-gap:4mm!important;
-    row-gap:.8mm!important;
-    font-size:7.6px!important;
-    margin:0 0 2mm 0!important;
+  thead tr:first-child th{
+    background:#353633!important;color:#fff!important;
+    -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;
   }
-  .pInfo>div{white-space:nowrap!important}
-
-  .pTable{
-    width:87%!important;
-    max-width:87%!important;
-    margin:0 auto 0 0!important;
-    border-collapse:collapse!important;
-    table-layout:fixed!important;
-    font-size:7.7px!important;
+  thead tr:nth-child(2) th{
+    background:#d2d3d0!important;
+    -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;
   }
-  .pTable th,.pTable td{
-    border:1px solid #30312e!important;
-    text-align:center!important;
-    padding:0 1px!important;
-    height:4.75mm!important;
-    line-height:1.05!important;
-    overflow:hidden!important;
-    white-space:nowrap!important;
-  }
-  .pTable thead tr:first-child th{
-    background:#353633!important;color:#fff!important;font-weight:700!important;
-  }
-  .pTable thead tr:nth-child(2) th{
-    background:#d2d3d0!important;color:#111!important;font-weight:700!important;
-  }
-  .pTable .sun,.pTable .holiday{background:#f4a900!important;color:#111!important}
-  .pTable .entered{color:#123cff!important}
-  .pTable tfoot td{font-weight:700!important}
-
-  .pBottom{
-    width:87%!important;
-    font-size:7.2px!important;
-    margin-top:2.5mm!important;
-  }
-  .signs{
-    display:flex!important;
-    justify-content:space-between!important;
-    gap:10mm!important;
-    margin-top:4mm!important;
-  }
-  .signs span{
-    width:43%!important;
-    border-top:1px solid #222!important;
-    padding-top:1.2mm!important;
-    text-align:center!important;
-  }
-  .printLegend{margin-top:5mm!important;line-height:1.5!important}
-  .legendRow{display:flex!important;align-items:center!important;gap:2mm!important}
-  .legendBox{width:3mm!important;height:3mm!important;display:inline-block!important}
-  .lgFt{background:#d9153a!important}.lgSo{background:#f4a900!important}.lgUr{background:#159447!important}
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-}
+  .holiday{background:#d9153a!important}
+  .sun{background:#f4a900!important}
+  .vac{background:#159447!important}
+}@media(max-width:1100px){body{overflow-x:auto}.page{margin:0}}
 </style>
-
-
-<style id="header-compact-v13">
-.datehead h2{
-  font-size:22px!important;
-  letter-spacing:-0.6px!important;
-  overflow:visible!important;
-}
-@media(max-width:600px){
-  .datehead{
-    grid-template-columns:40px minmax(112px,1fr) 40px auto 40px!important;
-    gap:5px!important;
-    padding:6px!important;
-  }
-  .datehead h2{font-size:19px!important;letter-spacing:-0.8px!important}
-  #headerSaveDay{font-size:11px!important;padding:7px 8px!important}
-}
-#saveDay{display:none!important}
-</style>
-
-
-<style id="patients-v14">
-.top{gap:8px;flex-wrap:wrap}
-.topActions{display:flex;gap:7px;flex-wrap:wrap}
-.patient-note-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;align-items:end}
-.patient-pick{height:38px;width:100%;min-width:0;border:1px solid #b9c6d8;border-radius:9px;background:#eef5ff;padding:0 7px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.patient-modal{position:fixed;inset:0;background:#0005;display:none;align-items:center;justify-content:center;z-index:80;padding:14px}
-.patient-modal.open{display:flex}
-.patient-modal .inner{width:min(560px,100%);max-height:88vh;overflow:auto;background:#f7f4ff;border-radius:18px;padding:16px;box-shadow:0 16px 50px #0003}
-.patient-add{display:grid;grid-template-columns:1fr auto;gap:8px;margin:12px 0}
-.patient-add input{min-width:0}
-.patient-list{display:flex;flex-direction:column;gap:8px}
-.patient-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:center;background:#fff;border:1px solid #ddd6f3;border-radius:11px;padding:8px}
-.patient-name{font-weight:700;overflow-wrap:anywhere}
-.patient-edit{background:#e8f2ff;color:#245b93}
-.patient-delete{background:#ffe8e8;color:#9b2d2d}
-.patient-msg{min-height:20px;margin-top:8px;font-size:13px;font-weight:700;color:#a12b2b}
-@media(max-width:600px){
- .topActions{width:100%}.topActions .iconbtn{flex:1}
- .patient-pick{min-width:78px;font-size:12px}
-}
-@media print{.patient-modal{display:none!important}}
-</style>
-
-
-<style id="full-page-navigation-v24">
-/* Day editor, settings and patient screens behave like real app pages */
-.sheet,
-.settings,
-.patient-modal{
-  position:fixed!important;
-  inset:0!important;
-  width:100%!important;
-  height:100dvh!important;
-  background:var(--bg,#eef2f8)!important;
-  z-index:80!important;
-  padding:0!important;
-  align-items:stretch!important;
-  justify-content:stretch!important;
-  overflow:auto!important;
-}
-.sheet .panel,
-.settings .inner,
-.patient-modal .inner{
-  width:100%!important;
-  max-width:none!important;
-  min-height:100dvh!important;
-  max-height:none!important;
-  margin:0!important;
-  border-radius:0!important;
-  box-shadow:none!important;
-  box-sizing:border-box!important;
-  overflow:visible!important;
-}
-.sheet .panel{padding:14px!important}
-.settings .inner,
-.patient-modal .inner{padding:18px!important}
-.sheet .panelInner{
-  width:100%!important;
-  max-width:760px!important;
-  margin:0 auto!important;
-  box-sizing:border-box!important;
-}
-.settings .inner>*,
-.patient-modal .inner>*{
-  max-width:760px;
-  margin-left:auto;
-  margin-right:auto;
-}
-.patient-modal .panelhead,
-.settings .panelhead{
-  position:sticky;
-  top:0;
-  z-index:3;
-  background:inherit;
-  padding-top:4px;
-  padding-bottom:10px;
-}
-@media(max-width:600px){
-  .sheet .panel{padding:8px!important}
-  .settings .inner,.patient-modal .inner{padding:12px!important}
-}
-</style>
-
-
-<style id="save-feedback-v25">
-.save-status{
-  display:inline-block;
-  min-width:0;
-  margin-left:9px;
-  color:#159447;
-  font-weight:800;
-  font-size:14px;
-  opacity:0;
-  transform:translateY(2px);
-  transition:opacity .18s ease,transform .18s ease;
-}
-.save-status.show{opacity:1;transform:translateY(0)}
-#patientsModal .panelhead .save-status{margin-left:auto;margin-right:8px}
-</style>
-
-
-<style id="calendar-details-v26">
-.day .num{font-size:17px!important;line-height:1.05!important}
-.day .hours{font-size:12px!important;margin-top:5px!important;font-weight:800!important}
-.day .patient-day-names{
-  font-size:9.5px!important;
-  line-height:1.2!important;
-  margin-top:4px!important;
-  font-weight:650!important;
-  color:#4d5870!important;
-  overflow:hidden!important;
-  display:-webkit-box!important;
-  -webkit-line-clamp:3!important;
-  -webkit-box-orient:vertical!important;
-  word-break:break-word!important;
-}
-.day{padding:7px 5px!important;align-content:start!important}
-</style>
-
-
-<style id="detail-pdf-v27">
-#detailPrintPage{display:none}
-@media print{
- body.detail-print .app,
- body.detail-print .sheet,
- body.detail-print .settings,
- body.detail-print .patient-modal,
- body.detail-print #printPage{display:none!important}
- body.detail-print #detailPrintPage{
-   display:block!important;
-   width:100%!important;
-   margin:0!important;
-   padding:0!important;
- }
- body.detail-print{
-   background:#fff!important;
-   margin:0!important;
- }
- @page{size:A4 landscape;margin:6mm}
- .dReport{font-family:Arial,sans-serif;color:#111;width:100%;box-sizing:border-box}
- .dHead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #222;padding-bottom:2.5mm;margin-bottom:3mm}
- .dTitle{font-size:17px;font-weight:800}
- .dMeta{font-size:9px;line-height:1.45;text-align:right}
- .dTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.4px}
- .dTable th,.dTable td{border:0.7px solid #555;padding:1.1mm 1mm;vertical-align:top;overflow:hidden}
- .dTable th{background:#e8edf5;font-size:7.1px;text-align:center}
- .dTable td.c{text-align:center;vertical-align:middle}
- .dTable td.note{font-size:6.8px;line-height:1.15}
- .dTable tr{height:5.3mm}
- .dTable tr.used{height:7mm}
- .dTable .sun{background:#fff1d7}
- .dTable .holiday{background:#ffe1e5}
- .dPatient{font-weight:700}
- .dDesc{margin-top:.5mm;color:#333}
- .dFoot{display:flex;justify-content:space-between;gap:8mm;margin-top:3mm;font-size:8px}
- .dSummary{border:1px solid #777;padding:2mm 3mm;min-width:70mm}
- .dSign{flex:1;display:flex;gap:8mm;align-items:flex-end}
- .dSign span{flex:1;border-top:1px solid #333;text-align:center;padding-top:1mm}
- *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-}
-</style>
-
-
-<style id="force-detail-landscape-v28">
+<style>
+@page { size: A4 portrait; margin: 4mm; }
 @media print {
-  @page detailLandscape { size: A4 landscape; margin: 6mm; }
-  body.detail-print #detailPrintPage {
-    page: detailLandscape !important;
+  html, body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  body.detail-print #detailPrintPage .dReport {
-    width: 285mm !important;
-    max-width: 285mm !important;
+  .monthbar,.actions { display:none !important; }
+  .page {
+    width: 202mm !important;
+    height: 289mm !important;
+    min-height: 289mm !important;
+    margin: 0 auto !important;
+    padding: 4mm 3mm 3mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  h1 {
+    font-size: 22px !important;
+    margin: 0 0 4mm 4mm !important;
+    padding-bottom: 1mm !important;
+  }
+  .info {
+    grid-template-columns: 76mm 59mm 55mm !important;
+    gap: 2mm !important;
+    margin: 0 1mm 4mm !important;
+  }
+  .info .r,.r {
+    font-size: 11.5px !important;
+    margin-bottom: 1.7mm !important;
+    grid-template-columns: 32mm 1fr !important;
+  }
+  table {
+    width:100% !important;
+    font-size: 9.3px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid-page !important;
+  }
+  th,td { height: 5.65mm !important; padding: .25mm !important; }
+  thead tr:first-child th { font-size: 10px !important; }
+  input { font-size: 9.3px !important; }
+  .correct { font-size: 10px !important; margin: 4mm 0 6mm 3mm !important; }
+  .sigs { gap: 20mm !important; margin: 0 20mm 6mm !important; font-size: 8.5px !important; }
+  .legend { font-size: 8.5px !important; margin: 0 0 0 2mm !important; }
+  .legend div { margin: 0 !important; }
+  .sw { width: 5mm !important; height: 4mm !important; }
+  .foot { font-size: 8.5px !important; margin: 4mm 2mm 0 !important; }
+
+  .sunrow .d,.sunrow .date,.holidayrow .d,.holidayrow .date {
+    background:#f4a900 !important; color:#111 !important;
+    -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;
+  }
+  thead tr:first-child th {
+    background:#353633 !important; color:#fff !important;
+    -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;
+  }
+  thead tr:nth-child(2) th {
+    background:#d2d3d0 !important;
+    -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;
+  }
+}
+</style>
+
+<style id="android-print-fix">
+@media print {
+  @page { size: A4 portrait; margin: 4mm; }
+
+  html, body {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .page {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 289mm !important;
+    min-height: 289mm !important;
+    margin: 0 !important;
+    padding: 3mm 2.5mm !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  /* Keep all 13 columns inside the printable A4 width. */
+  table th, table td {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .actions, .toolbar, #monthSelect, #fillDashes, #manualSave {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 </style>
 
 
-<style id="login-screen-v29">
-#loginScreen{
- position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
- padding:20px;background:linear-gradient(145deg,#e8edf7,#d8e3f3);font-family:Arial,sans-serif
+<style id="compact-table-v2">
+/* Compact table on screen and in PDF */
+.page table{
+  width:100% !important;
+  max-width:100% !important;
+  table-layout:fixed !important;
+  border-collapse:collapse !important;
 }
-.login-card{
- width:min(92vw,390px);box-sizing:border-box;padding:28px 22px;border-radius:24px;
- background:rgba(255,255,255,.92);box-shadow:0 18px 55px rgba(25,45,80,.18);
- border:1px solid rgba(255,255,255,.95)
+.page table th,
+.page table td{
+  min-width:0 !important;
+  width:auto !important;
+  padding-left:1px !important;
+  padding-right:1px !important;
+  font-size:8px !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
 }
-.login-card h1{font-size:24px;margin:0 0 7px;text-align:center}
-.login-card p{font-size:13px;color:#687386;text-align:center;margin:0 0 22px}
-.login-card label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
-.login-card input{
- width:100%;box-sizing:border-box;height:46px;border:1px solid #cbd5e4;border-radius:12px;
- padding:0 13px;font-size:16px;background:#fff
+.page table input{
+  width:100% !important;
+  min-width:0 !important;
+  padding:0 !important;
+  margin:0 !important;
+  font-size:8px !important;
+  text-align:center !important;
+  box-sizing:border-box !important;
 }
-#loginSubmit{
- width:100%;height:48px;margin-top:18px;border:0;border-radius:13px;font-size:16px;
- font-weight:800;background:#2e67c7;color:white
+
+/* Explicit narrow column proportions, 13 columns total */
+.page table th:nth-child(1), .page table td:nth-child(1){width:4.5% !important;}  /* Tag */
+.page table th:nth-child(2), .page table td:nth-child(2){width:10% !important;}   /* Datum */
+.page table th:nth-child(3), .page table td:nth-child(3){width:7.5% !important;}
+.page table th:nth-child(4), .page table td:nth-child(4){width:7.5% !important;}
+.page table th:nth-child(5), .page table td:nth-child(5){width:7.5% !important;}
+.page table th:nth-child(6), .page table td:nth-child(6){width:7.5% !important;}
+.page table th:nth-child(7), .page table td:nth-child(7){width:7.5% !important;}
+.page table th:nth-child(8), .page table td:nth-child(8){width:7.5% !important;}
+.page table th:nth-child(9), .page table td:nth-child(9){width:6.5% !important;}  /* Pause */
+.page table th:nth-child(10),.page table td:nth-child(10){width:8% !important;}  /* Tages gesamt */
+.page table th:nth-child(11),.page table td:nth-child(11){width:5% !important;}  /* So */
+.page table th:nth-child(12),.page table td:nth-child(12){width:5% !important;}  /* FT */
+.page table th:nth-child(13),.page table td:nth-child(13){width:5.5% !important;}/* RB */
+
+@media print{
+  @page{size:A4 portrait;margin:5mm !important;}
+  html,body{
+    margin:0 !important;padding:0 !important;width:100% !important;
+    overflow:visible !important;
+  }
+  .page{
+    width:100% !important;
+    max-width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:2mm !important;
+    overflow:visible !important;
+    box-sizing:border-box !important;
+  }
+  .page table{
+    width:96% !important;       /* extra safety margin on Android print */
+    max-width:96% !important;
+    margin-left:0 !important;
+    margin-right:auto !important;
+  }
+  .page table th,.page table td,.page table input{
+    font-size:7px !important;
+  }
 }
-#loginError{min-height:18px;margin-top:10px;text-align:center;color:#c62828;font-size:13px;font-weight:700}
-body.login-locked{overflow:hidden!important}
 </style>
 
-</head>
-<body>
-<div id="loginScreen">
- <form class="login-card" id="loginForm" autocomplete="off">
-  <h1>Stundennachweis</h1>
-  <p>Bitte anmelden</p>
-  <label for="loginUser">Benutzername</label>
-  <input id="loginUser" type="text" autocapitalize="none" autocomplete="username">
-  <label for="loginPass">Passwort</label>
-  <input id="loginPass" type="password" autocomplete="current-password">
-  <button id="loginSubmit" type="submit">Anmelden</button>
-  <div id="loginError"></div>
- </form>
+
+<style id="narrow-columns-normal-font">
+/* Keep the original readable font size; only reduce column widths. */
+.page table th,
+.page table td{
+  font-size: inherit !important;
+  padding-left: 1px !important;
+  padding-right: 1px !important;
+}
+.page table input{
+  font-size: inherit !important;
+  padding: 0 !important;
+}
+
+/* Narrower columns. Datum roughly reduced from ~3 cm to ~2 cm. */
+.page table th:nth-child(1), .page table td:nth-child(1){width:4% !important;}   /* Tag */
+.page table th:nth-child(2), .page table td:nth-child(2){width:8% !important;}   /* Datum */
+.page table th:nth-child(3), .page table td:nth-child(3){width:6.5% !important;} /* FD von */
+.page table th:nth-child(4), .page table td:nth-child(4){width:6.5% !important;} /* FD bis */
+.page table th:nth-child(5), .page table td:nth-child(5){width:6.5% !important;} /* FD gesamt */
+.page table th:nth-child(6), .page table td:nth-child(6){width:6.5% !important;} /* SD von */
+.page table th:nth-child(7), .page table td:nth-child(7){width:6.5% !important;} /* SD bis */
+.page table th:nth-child(8), .page table td:nth-child(8){width:6.5% !important;} /* SD gesamt */
+.page table th:nth-child(9), .page table td:nth-child(9){width:6% !important;}   /* Pause */
+.page table th:nth-child(10),.page table td:nth-child(10){width:7% !important;}  /* Tages gesamt */
+.page table th:nth-child(11),.page table td:nth-child(11){width:4.5% !important;}/* So */
+.page table th:nth-child(12),.page table td:nth-child(12){width:4.5% !important;}/* FT */
+.page table th:nth-child(13),.page table td:nth-child(13){width:4.5% !important;}/* RB */
+
+@media print{
+  .page table{
+    width:92% !important;
+    max-width:92% !important;
+    margin-left:0 !important;
+    margin-right:auto !important;
+  }
+  .page table th,
+  .page table td,
+  .page table input{
+    font-size: inherit !important;
+  }
+}
+</style>
+
+
+<style id="one-page-final-print">
+@media print {
+  @page { size: A4 portrait; margin: 4mm !important; }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .page {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Keep a safe right margin so Android never clips the last columns. */
+  .page table {
+    width: 87% !important;
+    max-width: 87% !important;
+    margin: 0 auto 0 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Normal font size; only a safe row height. */
+  .page tbody tr {
+    height: 5.05mm !important;
+    min-height: 5.05mm !important;
+    max-height: 5.05mm !important;
+  }
+
+  .page table th,
+  .page table td,
+  .page table input {
+    font-size: inherit !important;
+  }
+
+  .actions, .toolbar, #monthSelect, #fillDashes, #manualSave {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+</style>
+
+
+<style id="print-fill-page-v4">
+@media print {
+  @page { size: A4 portrait; margin: 4mm !important; }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .page {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+
+    /* Fill more of A4 vertically without changing table proportions. */
+    transform: scaleY(1.27) !important;
+    transform-origin: top left !important;
+  }
+
+  .page table {
+    width: 87% !important;
+    max-width: 87% !important;
+    margin: 0 auto 0 0 !important;
+    table-layout: fixed !important;
+  }
+
+  /* Restore natural row sizing; whole form is scaled instead. */
+  .page tbody tr {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .page table th,
+  .page table td,
+  .page table input {
+    font-size: inherit !important;
+  }
+
+  .actions, .toolbar, #monthSelect, #fillDashes, #manualSave {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+</style>
+
+
+<style id="pdf-only-table-font-larger">
+@media print {
+  /* ONLY the table text is enlarged. Header/info/signature/legend stay unchanged. */
+  .page table th,
+  .page table td,
+  .page table input {
+    font-size: 1.10em !important;
+  }
+}
+</style>
+
+</head><body><main class="page">
+<div class="monthbar">
+  <label for="monthSelect">Monat auswählen:</label>
+  <select id="monthSelect">
+    <option value="9">September 2026</option>
+    <option value="10">Oktober 2026</option>
+    <option value="11">November 2026</option>
+    <option value="12">Dezember 2026</option>
+  </select>
 </div>
-
-<div class="app">
- <div class="top"><h1>Stundennachweis</h1><div class="topActions"><button class="iconbtn" id="patientsBtn" onclick="document.getElementById('patientMsg').textContent='';document.getElementById('newPatientName').value='';renderPatients();document.getElementById('patientsModal').classList.add('open');">👥 Patienten</button><button class="iconbtn" id="settingsBtn">⚙ Einstellungen</button></div></div>
- <div class="monthbar"><button class="iconbtn" id="prev">‹</button><select id="monthSelect"></select><button class="iconbtn" id="next">›</button></div>
- <div class="week"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
- <div class="calendar" id="calendar"></div>
-<div id="monthSummary" style="margin-top:12px;background:#fff;border-radius:12px;padding:14px;font-weight:700;text-align:center;box-shadow:0 1px 5px #0001">Gesamtstunden im Monat: 00:00</div>
- <div class="footerActions"><button class="btn primary" id="pdfBtn">PDF erstellen</button><button class="btn" id="pdfDetailBtn">PDF Detail</button><button class="btn" id="saveBtn">Speichern</button><span id="mainSaveStatus" class="save-status"></span></div>
-</div>
-
-<div class="sheet" id="sheet"><div class="panel"><div class="panelInner">
- <div class="datehead">
-   <button class="iconbtn navday" id="prevDay" title="Vorheriger Tag">‹</button>
-   <h2 id="editTitle">Tag bearbeiten</h2>
-   <button class="iconbtn navday" id="nextDay" title="Nächster Tag">›</button>
-   <button class="iconbtn" id="headerSaveDay" style="background:#dff3e5;color:#23684f;font-weight:700;font-size:12px;padding:8px">Speichern</button>
-   <button class="iconbtn" id="closeSheet">✕</button>
- </div>
- <div class="grid">
-  <div class="field full shift-fd" style="border:1px solid var(--line);border-radius:14px;padding:12px">
-   <b style="margin-bottom:10px">Frühdienst (FD)</b>
-   <div style="display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1.65fr) minmax(48px,.55fr);gap:5px">
-    <div class="inline-time"><span>Von</span><input inputmode="numeric" data-f="fdFrom"></div>
-    <div class="inline-time"><span>Bis</span><input inputmode="numeric" data-f="fdTo"></div>
-    <div class="total-display" id="fdTotalInput">00:00</div>
-   </div>
-   <div class="field" style="margin-top:10px"><label>Beschreibung</label>
-    <div class="patient-note-row"><button type="button" class="patient-pick" data-shift="fd" onclick="openPatientPicker('fd')">Patient ▾</button><textarea class="shift-note" rows="1" data-f="fdNote"></textarea></div>
-    <input type="hidden" data-f="fdPatientId">
-    </div>
-  </div>
-
-  <div class="field full shift-sd" style="border:1px solid var(--line);border-radius:14px;padding:12px">
-   <b style="margin-bottom:10px">Spätdienst (SD)</b>
-   <div style="display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1.65fr) minmax(48px,.55fr);gap:5px">
-    <div class="inline-time"><span>Von</span><input inputmode="numeric" data-f="sdFrom"></div>
-    <div class="inline-time"><span>Bis</span><input inputmode="numeric" data-f="sdTo"></div>
-    <div class="total-display" id="sdTotalInput">00:00</div>
-   </div>
-   <div class="field" style="margin-top:10px"><label>Beschreibung</label>
-    <div class="patient-note-row"><button type="button" class="patient-pick" data-shift="sd" onclick="openPatientPicker('sd')">Patient ▾</button><textarea class="shift-note" rows="1" data-f="sdNote"></textarea></div>
-    <input type="hidden" data-f="sdPatientId">
-    </div>
-  </div>
-
-  <div class="field full triple-row">
-    <div class="inline-small"><span>Pause</span><input inputmode="numeric" data-f="pause"></div>
-    <div class="inline-small"><span>FT</span><input data-f="ft"></div>
-    <div class="inline-small"><span>RB</span><input data-f="rb"></div>
-  </div>
- </div>
- <div class="calcbox day-total-only"><div>Tagesgesamt<b id="dayTotal">00:00</b></div></div>
- <div style="display:none"><b id="fdTotal">00:00</b><b id="sdTotal">00:00</b><b id="soTotal">00:00</b></div>
- <button class="btn primary" id="saveDay" style="width:100%">Tag speichern</button>
-</div></div></div>
-
-
-<div class="patient-modal" id="patientsModal"><div class="inner">
- <div class="panelhead"><h2 id="patientsTitle">Patienten</h2><span id="patientSaveStatus" class="save-status"></span><button class="iconbtn" id="closePatients">✕</button></div>
- <div class="patient-add"><input id="newPatientName" placeholder="Nachname"><button class="btn primary" id="addPatient">Hinzufügen</button></div>
- <div class="patient-list" id="patientList"></div>
- <div class="patient-msg" id="patientMsg"></div>
-</div></div>
-
-<div class="patient-modal" id="patientPicker"><div class="inner">
- <div class="panelhead"><h2 id="pickerTitle">Patient auswählen</h2><button class="iconbtn" id="closePicker">✕</button></div>
- <div class="patient-list" id="pickerList"></div>
-</div></div>
-
-<div class="settings" id="settings"><div class="inner">
- <div class="panelhead"><h2>Einstellungen</h2><button class="iconbtn" id="closeSettings">✕</button></div>
- <div class="field"><label>Name des Mitarbeiters</label><input id="employeeName"></div>
- <div class="field" style="margin-top:12px"><label id="payGroupLabel">Lohngruppe</label><input id="payGroup"></div>
- 
- <input type="hidden" id="languageSelect" value="de"><button class="btn primary" id="saveSettings" style="margin-top:16px;width:100%">Speichern</button>
-</div></div>
-
-<div id="printPage"></div><div id="detailPrintPage"></div>
-
+<h1>Stundennachweis / Arbeitszeiterfassung</h1>
+<section class="info"><div><div class="r"><span>Mitarbeiter</span><span class="v under">Atieh Fathi Bairaghvandi</span></div><div class="r"><span>Zeitraum</span><span class="v under">01.09.2026 - 30.09.2026</span></div><div class="r"><span>Lohngruppe</span><span class="v">1</span></div></div>
+<div><div class="r"><span>Sollzeit / täglich</span><span class="v blue">6,05</span></div><div class="r"><span>Sollzeit / wöchentlich</span><span class="v blue">30,25</span></div><div class="r"><span>Sollzeit pro Monat</span><span class="v blue">130,08</span></div></div>
+<div><div class="r"><span>Url.Std/Tag</span><span class="v red">6,05</span></div><div class="r"><span>Krank-Std/Tag</span><span class="v red">6,05</span></div><div class="r"><span>bei 6 Tage / Woche</span></div></div></section>
+<table><colgroup><col style="width:54px"><col style="width:118px"><col span="6" style="width:80px"><col style="width:75px"><col style="width:84px"><col span="3" style="width:61px"></colgroup>
+<thead><tr><th colspan="2">Dienst</th><th colspan="3">FD</th><th colspan="3">SD</th><th></th><th>Tages</th><th></th><th></th><th></th></tr><tr><th>Tag</th><th>Datum</th><th>von</th><th>bis</th><th>gesamt</th><th>von</th><th>bis</th><th>gesamt</th><th>Pause</th><th>gesamt</th><th>So</th><th>FT</th><th>RB</th></tr></thead><tbody id="body"></tbody>
+<tfoot><tr><td colspan="2" class="sum">Summe der Stunden</td><td colspan="2"></td><td id="fds" class="calc"></td><td colspan="2"></td><td id="sds" class="calc"></td><td></td><td id="alls" class="calc"></td><td id="sos" class="calc"></td><td></td><td>0,00 €</td></tr></tfoot></table>
+<div class="correct">Für sachliche Richtigkeit</div><div class="sigs"><div class="sig">Datum, Unterschrift des Mitarbeiters</div><div class="sig">Datum, Unterschrift PDL / Verwaltung</div></div>
+<div class="legend"><div><span class="sw" style="background:#d9153a"></span>Feiertage</div><div><span class="sw" style="background:#f4a900"></span>Sonntag</div><div><span class="sw" style="background:#159447"></span>eingetragene Urlaub</div></div>
+<div class="foot">Die Bemerkungen bitte auf die Rückseite unter Angabe des Datums eintragen.</div><div class="actions"><span id="saveStatus" style="margin-right:12px;color:#555">Automatisch gespeichert</span><button id="fillDashes" type="button">Leere von/bis → –</button>
+<button id="manualSave" type="button">Speichern</button>
+<button onclick="window.print()">Drucken / PDF</button></div></main>
 <script>
-const monthNames=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-const wd=["So","Mo","Di","Mi","Do","Fr","Sa"];
-const holidays2026=["2026-01-01","2026-04-03","2026-04-06","2026-05-01","2026-05-14","2026-05-25","2026-10-03","2026-12-25","2026-12-26"];
-let year=2026, month=8, selectedDay=null;
-let db=JSON.parse(localStorage.getItem("stundenKalenderV1")||"{}");
-let settings=JSON.parse(localStorage.getItem("stundenSettingsV1")||'{"employee":"Atieh Fathi Bairaghvandi","payGroup":"1","language":"de"}');
-let patients=JSON.parse(localStorage.getItem("stundenPatientsV1")||"[]");
-patients=(Array.isArray(patients)?patients:[]).map((p,i)=>{
-  if(typeof p==="string") return {id:"legacy_"+i+"_"+Date.now(),name:p.trim()};
-  if(!p || typeof p!=="object") return null;
-  const name=String(p.name ?? p.nachname ?? p.surname ?? "").trim();
-  if(!name) return null;
-  return {id:String(p.id || ("legacy_"+i+"_"+Date.now())),name:name};
-}).filter(Boolean);
-localStorage.setItem("stundenPatientsV1",JSON.stringify(patients));
-let pickerShift=null;
+const names=["So","Mo","Di","Mi","Do","Fr","Sa"];
+const monthNames={9:"September",10:"Oktober",11:"November",12:"Dezember"};
+const holidays={
+  9:[],
+  10:["2026-10-03"],
+  11:[],
+  12:["2026-12-25","2026-12-26"]
+};
+const body=document.getElementById("body"), pad=n=>String(n).padStart(2,"0");
+let currentMonth=9;
 
-function pad(n){return String(n).padStart(2,"0")}
-function key(d){return `${year}-${pad(month+1)}-${pad(d)}`}
-function mins(v){v=(v||"").trim();if(!v||v==="–")return null;let z=v.replace(/[^\d]/g,"");let h,m;if(v.includes(":")){[h,m]=v.split(":").map(Number)}else if(z.length<=2){h=+z;m=0}else if(z.length===3){h=+z[0];m=+z.slice(1)}else{h=+z.slice(0,2);m=+z.slice(2,4)}if(h>23||m>59)return null;return h*60+m}
-function fmt(n){return `${pad(Math.floor(n/60))}:${pad(n%60)}`}
-function norm(v){let n=mins(v);return n==null?(v||""):fmt(n)}
-function totals(o,d){
- let a=mins(o.fdFrom),b=mins(o.fdTo),c=mins(o.sdFrom),e=mins(o.sdTo),p=mins(o.pause)||0;
- let fd=a!=null&&b!=null&&b>=a?b-a:0, sd=c!=null&&e!=null&&e>=c?e-c:0, total=Math.max(0,fd+sd-p);
- let dt=new Date(Date.UTC(year,month,d)), iso=key(d), special=dt.getUTCDay()===0||holidays2026.includes(iso);
- return {fd,sd,total,so:special?total:0,special};
+function key(){return `stundennachweis_2026_${pad(currentMonth)}_v2`}
+function m(v){
+  v=(v||"").trim().replace(".",":");
+  if(/^\d{1,2}$/.test(v)) return Number(v)*60;
+  if(!/^\d{1,2}:\d{1,2}$/.test(v)) return null;
+  let[a,b]=v.split(":").map(Number);
+  if(a>23||b>59)return null;
+  return a*60+b;
 }
-function populateMonths(){
- monthSelect.innerHTML="";
- for(let i=0;i<12;i++){let op=document.createElement("option");op.value=i;op.textContent=`${monthNames[i]} ${year}`;monthSelect.appendChild(op)}
- monthSelect.value=month;
-}
+function h(n){return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0")}
 
-function calendarPatientNames(o){
-  const ids=[o.fdPatientId,o.sdPatientId].filter(Boolean);
-  const names=[];
-  ids.forEach(id=>{
-    const p=patients.find(x=>x.id===id);
-    const n=p && p.name ? String(p.name).trim() : "";
-    if(n && !names.includes(n)) names.push(n);
-  });
-  return names;
-}
-function render(){
- calendar.innerHTML=""; monthSelect.value=month;
- let first=new Date(Date.UTC(year,month,1)); let offset=(first.getUTCDay()+6)%7; let last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
- let monthTotal=0;
- for(let i=0;i<offset;i++){let e=document.createElement("div");e.className="day empty";calendar.appendChild(e)}
+function buildMonth(month){
+ currentMonth=Number(month);
+ body.innerHTML="";
+ const last=new Date(Date.UTC(2026,currentMonth,0)).getUTCDate();
  for(let d=1;d<=last;d++){
-   let o=db[key(d)]||{}, t=totals(o,d), dt=new Date(Date.UTC(year,month,d)), iso=key(d);
-   monthTotal+=t.total;
-   let el=document.createElement("button");el.className="day";
-   if(dt.getUTCDay()===0)el.classList.add("sun"); if(holidays2026.includes(iso))el.classList.add("holiday");
-   const hasEntered=Object.values(o).some(v=>String(v||"").trim()!=="");
-   const missingPause=t.total>300 && !(mins(o.pause)>0);
-   if(hasEntered){ el.classList.add(missingPause?"invalid":"valid"); }
-   const patientNames=calendarPatientNames(o);
-   el.innerHTML=`<div class="num">${d}</div><div class="hours">${t.total?fmt(t.total):""}</div>${patientNames.length?`<div class="patient-day-names">${patientNames.join("<br>")}</div>`:""}`;
-   el.onclick=()=>openDay(d);calendar.appendChild(el);
- }
- document.getElementById("monthSummary").textContent=`Gesamtstunden im Monat: ${fmt(monthTotal)}`;
-}
-function openDay(d){
- selectedDay=d; let o=db[key(d)]||{};
- editTitle.textContent=`${pad(d)}.${pad(month+1)}.${year}`;
- document.querySelectorAll("[data-f]").forEach(x=>x.value=o[x.dataset.f]||"");
- ["fd","sd"].forEach(sh=>{
-   const pid=o[sh+"PatientId"]||"";
-   const p=patients.find(x=>x.id===pid);
-   const pick=document.querySelector(`.patient-pick[data-shift="${sh}"]`);
-   if(pick) pick.textContent=(p?p.name:((LANG[settings.language||"de"]||LANG.de).pickPatient))+" ▾";
- });
- recalcEditor(); sheet.classList.add("open");
-}
-function recalcEditor(){
- let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
- let t=totals(o,selectedDay||1);fdTotal.textContent=fmt(t.fd);sdTotal.textContent=fmt(t.sd);dayTotal.textContent=fmt(t.total);soTotal.textContent=fmt(t.so);fdTotalInput.textContent=fmt(t.fd);sdTotalInput.textContent=fmt(t.sd);
-}
-document.querySelectorAll("[data-f]").forEach(x=>{x.addEventListener("input",recalcEditor);if(x.tagName==="INPUT"&&["fdFrom","fdTo","sdFrom","sdTo","pause"].includes(x.dataset.f))x.addEventListener("blur",()=>{x.value=norm(x.value);recalcEditor()})});
-
-function moveEditorDay(delta){
-  if(selectedDay==null) return;
-  let dt=new Date(Date.UTC(year,month,selectedDay));
-  dt.setUTCDate(dt.getUTCDate()+delta);
-  year=dt.getUTCFullYear();
-  month=dt.getUTCMonth();
-  selectedDay=dt.getUTCDate();
-  populateMonths();
-  render();
-  openDay(selectedDay);
-}
-prevDay.onclick=()=>moveEditorDay(-1);
-nextDay.onclick=()=>moveEditorDay(1);
-headerSaveDay.onclick=()=>saveDay.click();
-
-saveDay.onclick=()=>{let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);db[key(selectedDay)]=o;persist();sheet.classList.remove("open");render()};
-function persist(){localStorage.setItem("stundenKalenderV1",JSON.stringify(db))}
-saveBtn.onclick=()=>{
-  persist();
-  const st=document.getElementById("mainSaveStatus");
-  st.textContent="Gespeichert ✓";
-  st.classList.add("show");
-  clearTimeout(window._mainSaveTimer);
-  window._mainSaveTimer=setTimeout(()=>st.classList.remove("show"),2200);
-}; closeSheet.onclick=()=>sheet.classList.remove("open");
-prev.onclick=()=>{if(month===0){month=11;year--}else month--;populateMonths();render()};
-next.onclick=()=>{if(month===11){month=0;year++}else month++;populateMonths();render()};
-monthSelect.onchange=e=>{month=+e.target.value;render()};
-settingsBtn.onclick=()=>{employeeName.value=settings.employee||"";payGroup.value=settings.payGroup||"";languageSelect.value="de";document.getElementById("settings").classList.add("open")};
-closeSettings.onclick=()=>document.getElementById("settings").classList.remove("open");
-saveSettings.onclick=()=>{settings={employee:employeeName.value.trim(),payGroup:payGroup.value.trim(),language:"de"};localStorage.setItem("stundenSettingsV1",JSON.stringify(settings));applyLanguage();document.getElementById("settings").classList.remove("open")};
-
-
-function persistPatients(){
-  localStorage.setItem("stundenPatientsV1",JSON.stringify(patients));
-  const st=document.getElementById("patientSaveStatus");
-  if(st){
-    st.textContent="Gespeichert ✓";
-    st.classList.add("show");
-    clearTimeout(window._patientSaveTimer);
-    window._patientSaveTimer=setTimeout(()=>st.classList.remove("show"),2200);
-  }
-}
-function patientUsed(id){
- return Object.values(db).some(o=>o && (o.fdPatientId===id || o.sdPatientId===id));
-}
-function renderPatients(){
- patientList.innerHTML="";
- if(!patients.length){
-   patientList.innerHTML='<div style="padding:14px;text-align:center;color:#667">Keine Patienten gespeichert.</div>';
-   return;
- }
- patients.slice().sort((a,b)=>String(a?.name||"").localeCompare(String(b?.name||""),"de")).forEach(p=>{
-   const row=document.createElement("div"); row.className="patient-item";
-   const name=document.createElement("div"); name.className="patient-name"; name.textContent=p.name;
-   const edit=document.createElement("button"); edit.className="iconbtn patient-edit"; edit.textContent="Bearbeiten";
-   const del=document.createElement("button"); del.className="iconbtn patient-delete"; del.textContent="Löschen";
-   edit.onclick=()=>{
-     const nn=prompt("Nachname",p.name);
-     if(nn==null)return;
-     const clean=nn.trim(); if(!clean)return;
-     p.name=clean;
-     persistPatients();renderPatients();patientMsg.textContent="";
-   };
-   del.onclick=()=>{
-     if(patientUsed(p.id)){
-       patientMsg.textContent="Dieser Patient wurde bereits in einem Kalendertag verwendet und kann nicht gelöscht werden. Bitte zuerst die Patientenzuordnung im Kalender entfernen.";
-       return;
-     }
-     patients=patients.filter(x=>x.id!==p.id);persistPatients();renderPatients();patientMsg.textContent="";
-   };
-   row.append(name,edit,del); patientList.appendChild(row);
- });
-}
-function openPatientPicker(shift){
- pickerShift=shift; pickerList.innerHTML="";
- if(!patients.length){
-   pickerList.innerHTML='<div style="padding:14px;text-align:center;color:#667">Keine Patienten gespeichert.</div>';
- }else{
-   patients.slice().sort((a,b)=>String(a?.name||"").localeCompare(String(b?.name||""),"de")).forEach(p=>{
-     const b=document.createElement("button");b.className="btn";b.style.cssText="width:100%;text-align:left;margin-bottom:7px;background:#fff";
-     b.textContent=p.name;
-     b.onclick=()=>{
-       const pid=document.querySelector(`[data-f="${pickerShift}PatientId"]`);
-       const pick=document.querySelector(`.patient-pick[data-shift="${pickerShift}"]`);
-       pid.value=p.id;
-       if(pick) pick.textContent=p.name+" ▾";
-       patientPicker.classList.remove("open"); recalcEditor();
-     };
-     pickerList.appendChild(b);
+   const dt=new Date(Date.UTC(2026,currentMonth-1,d));
+   const dow=names[dt.getUTCDay()];
+   const iso=`2026-${pad(currentMonth)}-${pad(d)}`;
+   const tr=document.createElement("tr");
+   if(dow==="So")tr.classList.add("sunrow");
+   if(holidays[currentMonth].includes(iso))tr.classList.add("holidayrow");
+   tr.innerHTML=`<td class="d">${dow}</td><td class="date">${pad(d)}.${pad(currentMonth)}.2026</td>`;
+   ["ff","ft","fc","sf","st","sc","p","dc","so","hol","rb"].forEach((c,i)=>{
+     let td=document.createElement("td"); td.dataset.c=c;
+     if([0,1,3,4,6,9,10].includes(i)){
+       let x=document.createElement("input");x.dataset.i=c;
+       x.addEventListener("input",()=>{calc();saveData()});td.appendChild(x);
+     }else td.className="calc";
+     tr.appendChild(td);
    });
+   body.appendChild(tr);
  }
- patientPicker.classList.add("open");
-}
-patientsBtn.onclick=()=>{patientMsg.textContent="";newPatientName.value="";renderPatients();patientsModal.classList.add("open")};
-closePatients.onclick=()=>patientsModal.classList.remove("open");
-addPatient.onclick=()=>{
- const name=newPatientName.value.trim();
- if(!name){patientMsg.textContent="Bitte Nachname eingeben.";return}
- if(patients.some(p=>String(p?.name||"").toLocaleLowerCase()===name.toLocaleLowerCase())){patientMsg.textContent="Dieser Patient ist bereits vorhanden.";return}
- patients.push({id:"p_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7),name});
- persistPatients();newPatientName.value="";patientMsg.textContent="";renderPatients();
-};
-newPatientName.addEventListener("keydown",e=>{if(e.key==="Enter")addPatient.click()});
-document.querySelectorAll(".patient-pick").forEach(b=>b.onclick=()=>openPatientPicker(b.dataset.shift));
-closePicker.onclick=()=>patientPicker.classList.remove("open");
-
-function buildPrint(){
- let last=new Date(Date.UTC(year,month+1,0)).getUTCDate(), rows="", sums={fd:0,sd:0,total:0,so:0};
- for(let d=1;d<=last;d++){
-  let o=db[key(d)]||{},t=totals(o,d),dt=new Date(Date.UTC(year,month,d)),iso=key(d),sun=dt.getUTCDay()===0,hol=holidays2026.includes(iso);
-  sums.fd+=t.fd;sums.sd+=t.sd;sums.total+=t.total;sums.so+=t.so;
-  rows+=`<tr>
-   <td class="${sun||hol?'sun':''}">${wd[dt.getUTCDay()]}</td>
-   <td class="${sun||hol?'sun':''}">${pad(d)}.${pad(month+1)}.${year}</td>
-   <td class="entered">${o.fdFrom||""}</td><td class="entered">${o.fdTo||""}</td><td class="entered">${t.fd?fmt(t.fd):""}</td>
-   <td class="entered">${o.sdFrom||""}</td><td class="entered">${o.sdTo||""}</td><td class="entered">${t.sd?fmt(t.sd):""}</td>
-   <td class="entered">${o.pause||""}</td><td class="entered">${t.total?fmt(t.total):""}</td>
-   <td class="entered">${t.so?fmt(t.so):""}</td><td class="entered">${o.ft||""}</td><td class="entered">${o.rb||""}</td>
-  </tr>`;
- }
- printPage.innerHTML=`
- <div class="pTitle">Stundennachweis / Arbeitszeiterfassung</div>
- <div class="pInfo">
-   <div><b>Mitarbeiter</b>&nbsp;&nbsp;&nbsp;&nbsp; ${settings.employee||""}</div>
-   <div><b>Sollzeit / täglich</b>&nbsp;&nbsp;&nbsp; 6,05</div>
-   <div><b>Url.Std/Tag</b>&nbsp;&nbsp;&nbsp; 6,05</div>
-
-   <div><b>Zeitraum</b>&nbsp;&nbsp;&nbsp;&nbsp; 01.${pad(month+1)}.${year} - ${pad(last)}.${pad(month+1)}.${year}</div>
-   <div><b>Sollzeit / wöchentlich</b>&nbsp;&nbsp;&nbsp; 30,25</div>
-   <div><b>Krank-Std/Tag</b>&nbsp;&nbsp;&nbsp; 6,05</div>
-
-   <div><b>Lohngruppe</b>&nbsp;&nbsp;&nbsp;&nbsp; ${settings.payGroup||""}</div>
-   <div><b>Sollzeit pro Monat</b>&nbsp;&nbsp;&nbsp; 130,08</div>
-   <div><b>bei 6 Tage / Woche</b></div>
- </div>
-
- <table class="pTable">
-  <colgroup>
-   <col style="width:5%"><col style="width:12%">
-   <col style="width:7%"><col style="width:7%"><col style="width:8%">
-   <col style="width:7%"><col style="width:7%"><col style="width:8%">
-   <col style="width:7%"><col style="width:9%"><col style="width:6%"><col style="width:6%"><col style="width:5%">
-  </colgroup>
-  <thead>
-   <tr><th colspan="2">Dienst</th><th colspan="3">FD</th><th colspan="3">SD</th><th colspan="5">Tages</th></tr>
-   <tr><th>Tag</th><th>Datum</th><th>von</th><th>bis</th><th>gesamt</th><th>von</th><th>bis</th><th>gesamt</th><th>Pause</th><th>gesamt</th><th>So</th><th>FT</th><th>RB</th></tr>
-  </thead>
-  <tbody>${rows}</tbody>
-  <tfoot><tr>
-   <td colspan="4" style="text-align:left">Summe der Stunden</td><td class="entered">${fmt(sums.fd)}</td>
-   <td colspan="2"></td><td class="entered">${fmt(sums.sd)}</td><td></td>
-   <td class="entered">${fmt(sums.total)}</td><td class="entered">${fmt(sums.so)}</td><td></td><td></td>
-  </tr></tfoot>
- </table>
-
- <div class="pBottom">
-   <div>Für sachliche Richtigkeit:</div>
-   <div class="signs">
-    <span>Datum, Unterschrift des Mitarbeiters</span>
-    <span>Datum, Unterschrift PDL / Verwaltung</span>
-   </div>
-   <div class="printLegend">
-    <div class="legendRow"><i class="legendBox lgFt"></i> Feiertag</div>
-    <div class="legendRow"><i class="legendBox lgSo"></i> Sonntag</div>
-    <div class="legendRow"><i class="legendBox lgUr"></i> eingetragener Urlaub</div>
-    <div style="margin-top:2mm">Die Bemerkungen bitte auf der Rückseite unter Angabe des Datums eintragen.</div>
-   </div>
- </div>`;
-}
-pdfBtn.onclick=()=>{buildPrint();setTimeout(()=>window.print(),50)};
-
-function patientNameById(id){
- const p=patients.find(x=>x.id===id);
- return p&&p.name ? p.name : "";
-}
-function buildDetailPrint(){
- const last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
- let rows="",sumFD=0,sumSD=0,sumTotal=0;
- for(let d=1;d<=last;d++){
-   const o=db[key(d)]||{},t=totals(o,d);
-   const dt=new Date(Date.UTC(year,month,d));
-   const iso=key(d),sun=dt.getUTCDay()===0,hol=holidays2026.includes(iso);
-   sumFD+=t.fd;sumSD+=t.sd;sumTotal+=t.total;
-   const fdP=patientNameById(o.fdPatientId), sdP=patientNameById(o.sdPatientId);
-   const fdInfo=[fdP?'<div class="dPatient">'+fdP+'</div>':'',o.fdNote?'<div class="dDesc">'+escapeHtml(o.fdNote)+'</div>':''].join("");
-   const sdInfo=[sdP?'<div class="dPatient">'+sdP+'</div>':'',o.sdNote?'<div class="dDesc">'+escapeHtml(o.sdNote)+'</div>':''].join("");
-   const used=t.total||fdP||sdP||o.fdNote||o.sdNote||o.ft||o.rb;
-   rows+=`<tr class="${used?'used':''}">
-    <td class="c ${hol?'holiday':sun?'sun':''}">${wd[dt.getUTCDay()]}</td>
-    <td class="c ${hol?'holiday':sun?'sun':''}">${pad(d)}.${pad(month+1)}.</td>
-    <td class="c">${o.fdFrom||""}</td><td class="c">${o.fdTo||""}</td>
-    <td class="note">${fdInfo}</td>
-    <td class="c">${o.sdFrom||""}</td><td class="c">${o.sdTo||""}</td>
-    <td class="note">${sdInfo}</td>
-    <td class="c">${o.pause||""}</td>
-    <td class="c"><b>${t.total?fmt(t.total):""}</b></td>
-    <td class="c">${o.ft||""}</td><td class="c">${o.rb||""}</td>
-   </tr>`;
- }
- document.getElementById("detailPrintPage").innerHTML=`
- <div class="dReport">
-   <div class="dHead">
-    <div><div class="dTitle">Monatsübersicht – Arbeitszeit & Patienten</div>
-    <div style="font-size:9px;margin-top:1mm">${monthNames[month]} ${year}</div></div>
-    <div class="dMeta"><b>Mitarbeiter:</b> ${escapeHtml(settings.employee||"")}<br><b>Lohngruppe:</b> ${escapeHtml(settings.payGroup||"")}</div>
-   </div>
-   <table class="dTable">
-    <colgroup>
-     <col style="width:4%"><col style="width:6%">
-     <col style="width:5%"><col style="width:5%"><col style="width:22%">
-     <col style="width:5%"><col style="width:5%"><col style="width:22%">
-     <col style="width:6%"><col style="width:7%"><col style="width:4%"><col style="width:4%">
-    </colgroup>
-    <thead><tr>
-     <th>Tag</th><th>Datum</th>
-     <th>FD<br>von</th><th>FD<br>bis</th><th>Patient / Beschreibung FD</th>
-     <th>SD<br>von</th><th>SD<br>bis</th><th>Patient / Beschreibung SD</th>
-     <th>Pause</th><th>Gesamt</th><th>FT</th><th>RB</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-   </table>
-   <div class="dFoot">
-    <div class="dSummary"><b>Monatssumme:</b> ${fmt(sumTotal)} &nbsp;&nbsp; | &nbsp; FD: ${fmt(sumFD)} &nbsp;&nbsp; | &nbsp; SD: ${fmt(sumSD)}</div>
-    <div class="dSign"><span>Datum / Mitarbeiter</span><span>PDL / Verwaltung</span></div>
-   </div>
- </div>`;
-}
-function escapeHtml(v){
- return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-}
-document.getElementById("pdfDetailBtn").onclick=()=>{
- buildDetailPrint();
- document.body.classList.add("detail-print");
- setTimeout(()=>window.print(),80);
-};
-window.addEventListener("afterprint",()=>document.body.classList.remove("detail-print"));
-
-
-const LANG={
- de:{app:"Stundennachweis",set:"⚙ Einstellungen",patients:"👥 Patienten",pickPatient:"Patient",pdf:"PDF erstellen",save:"Speichern",early:"Frühdienst (FD)",late:"Spätdienst (SD)",from:"Von",to:"Bis",desc:"Beschreibung",pause:"Pause",total:"Tagesgesamt",daySave:"Tag speichern",headSave:"Speichern",setTitle:"Einstellungen",emp:"Name des Mitarbeiters",group:"Lohngruppe",lang:"Sprache",monthly:"Gesamtstunden im Monat"},
- en:{app:"Timesheet",set:"⚙ Settings",patients:"👥 Patients",pickPatient:"Patient",pdf:"Create PDF",save:"Save",early:"Early Shift (FD)",late:"Late Shift (SD)",from:"From",to:"To",desc:"Description",pause:"Break",total:"Daily Total",daySave:"Save Day",headSave:"Save",setTitle:"Settings",emp:"Employee Name",group:"Pay Group",lang:"Language",monthly:"Total hours this month"},
- fa:{app:"ثبت ساعات کاری",set:"⚙ تنظیمات",patients:"👥 بیماران",pickPatient:"بیمار",pdf:"ساخت PDF",save:"ذخیره",early:"شیفت صبح (FD)",late:"شیفت عصر (SD)",from:"از",to:"تا",desc:"توضیحات",pause:"استراحت",total:"جمع کل روز",daySave:"ذخیره روز",headSave:"ذخیره",setTitle:"تنظیمات",emp:"نام کارمند",group:"گروه حقوقی",lang:"زبان",monthly:"جمع ساعات ماه"}
-};
-function applyLanguage(){
- const L=LANG.de;
- const appTitle=document.querySelector(".app h1"); if(appTitle)appTitle.textContent=L.app;
- settingsBtn.textContent=L.set; patientsBtn.textContent=L.patients; pdfBtn.textContent=L.pdf; saveBtn.textContent=L.save; document.querySelectorAll(".patient-pick").forEach(b=>b.textContent=L.pickPatient);
- const cards=document.querySelectorAll(".shift-fd,.shift-sd");
- if(cards[0])cards[0].querySelector("b").textContent=L.early;
- if(cards[1])cards[1].querySelector("b").textContent=L.late;
- const times=document.querySelectorAll(".inline-time");
- times.forEach((el,i)=>{const s=el.querySelector("span");if(s)s.textContent=(i%2===0?L.from:L.to)});
- document.querySelectorAll(".shift-fd label,.shift-sd label").forEach(el=>el.textContent=L.desc);
- const p=document.querySelector(".triple-row .inline-small span"); if(p)p.textContent=L.pause;
- const total=document.querySelector(".day-total-only>div");
- if(total){const b=total.querySelector("b"); total.childNodes[0].nodeValue=L.total; if(b)total.appendChild(b);}
- saveDay.textContent=L.daySave; headerSaveDay.textContent=L.headSave;
- const st=document.querySelector("#settings h2");if(st)st.textContent=L.setTitle;
- const emp=employeeName.closest(".field").querySelector("label");if(emp)emp.textContent=L.emp;
- payGroupLabel.textContent=L.group;languageLabel.textContent=L.lang;
- document.documentElement.dir="ltr";
+ document.querySelector(".info .r:nth-child(2) .v").textContent=
+   `01.${pad(currentMonth)}.2026 - ${pad(last)}.${pad(currentMonth)}.2026`;
+ loadData();
 }
 
-populateMonths();render();applyLanguage();
-</script>
-
-
-
-
-<script id="login-code-v29">
-(function(){
- const screen=document.getElementById("loginScreen");
- const form=document.getElementById("loginForm");
- const user=document.getElementById("loginUser");
- const pass=document.getElementById("loginPass");
- const err=document.getElementById("loginError");
- document.body.classList.add("login-locked");
-
- if(sessionStorage.getItem("stundenLogin")==="1"){
-   screen.style.display="none";
-   document.body.classList.remove("login-locked");
- }
- form.addEventListener("submit",function(e){
-   e.preventDefault();
-   if(user.value==="Hadi" && pass.value==="Hadi2525"){
-     sessionStorage.setItem("stundenLogin","1");
-     err.textContent="";
-     screen.style.display="none";
-     document.body.classList.remove("login-locked");
-   }else{
-     err.textContent="Benutzername oder Passwort ist falsch.";
-     pass.value="";
-     pass.focus();
-   }
+function calc(){
+ let F=0,S=0,A=0,O=0;
+ [...body.rows].forEach(r=>{
+   let q=c=>r.querySelector(`[data-c="${c}"]`),v=c=>q(c).querySelector("input")?.value||"";
+   let a=m(v("ff")),b=m(v("ft")),c=m(v("sf")),d=m(v("st"));
+   let f=(a!=null&&b!=null&&b>=a)?b-a:0,s=(c!=null&&d!=null&&d>=c)?d-c:0,p=m(v("p"))||0,t=Math.max(0,f+s-p);
+   q("fc").textContent=(a!=null&&b!=null)?h(f):"";
+   q("sc").textContent=(c!=null&&d!=null)?h(s):"";
+   q("dc").textContent=(f||s||p)?h(t):"";
+   if(r.classList.contains("sunrow")&&(f||s)){q("so").textContent=h(t);O+=t}else q("so").textContent="";
+   F+=f;S+=s;A+=t;
  });
-})();
-</script>
+ fds.textContent=h(F);sds.textContent=h(S);alls.textContent=h(A);sos.textContent=h(O);
+}
+function saveData(){
+ const data=[...document.querySelectorAll("tbody input")].map(x=>x.value);
+ localStorage.setItem(key(),JSON.stringify(data));
+ const s=document.getElementById("saveStatus");if(s)s.textContent="Gespeichert";
+}
+function loadData(){
+ try{
+   const data=JSON.parse(localStorage.getItem(key())||"null");
+   if(Array.isArray(data)){const inputs=[...document.querySelectorAll("tbody input")];data.forEach((v,i)=>{if(inputs[i])inputs[i].value=v||""})}
+ }catch(e){}
+ calc();
+}
+document.getElementById("monthSelect").addEventListener("change",e=>buildMonth(e.target.value));
 
-</body></html>
+
+// Mobile-friendly automatic time formatting.
+// Examples: 9 -> 09:00, 13 -> 13:00, 945 -> 09:45, 1330 -> 13:30.
+function formatTimeInput(raw){
+  let v=(raw||"").trim().replace(/[^\d]/g,"");
+  if(!v) return "";
+  let hh, mm;
+  if(v.length<=2){
+    hh=parseInt(v,10); mm=0;
+  } else if(v.length===3){
+    hh=parseInt(v.slice(0,1),10); mm=parseInt(v.slice(1),10);
+  } else {
+    v=v.slice(0,4);
+    hh=parseInt(v.slice(0,2),10); mm=parseInt(v.slice(2),10);
+  }
+  if(Number.isNaN(hh)||Number.isNaN(mm)||hh>23||mm>59) return raw;
+  return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
+}
+function enhanceTimeInputs(){
+  document.querySelectorAll('tbody input[data-i="ff"],tbody input[data-i="ft"],tbody input[data-i="sf"],tbody input[data-i="st"],tbody input[data-i="p"]').forEach(x=>{
+    x.setAttribute("inputmode","numeric");
+    x.setAttribute("autocomplete","off");
+    x.setAttribute("enterkeyhint","next");
+    x.addEventListener("focus",()=>{
+      // Make editing an existing HH:MM value easy on mobile.
+      x.select();
+    });
+    x.addEventListener("blur",()=>{
+      if(x.value.trim()){
+        x.value=formatTimeInput(x.value);
+        calc(); saveData();
+      }
+    });
+  });
+}
+const _oldBuildMonth=buildMonth;
+buildMonth=function(month){
+  _oldBuildMonth(month);
+  enhanceTimeInputs();
+};
+
+
+const septemberImportedData = ["", "", "", "", "", "", "", "09:00", "13:00", "14:00", "20:00", "02:00", "", "", "09:00", "12:30", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "12:00", "14:00", "", "", "", "", "", "11:00", "13:00", "13:00", "15:00", "", "", "", "", "", "14:00", "16:00", "", "", "", "", "", "13:00", "17:00", "", "", "", "13:00", "15:00", "16:00", "20:00", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "13:00", "15:00", "", "", "", "", "", "", "", "14:00", "16:00", "", "", "", "13:00", "15:00", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "13:00", "18:00", "", "", "", "10:00", "13:00", "14:00", "21:00", "", "", "", "10:00", "13:00", "16:00", "18:00", "", "", "", "10:00", "13:00", "16:00", "18:00", "", "", "", "09:00", "12:00", "16:00", "18:00", "", "", "", "09:00", "12:00", "16:00", "18:00", "", "", "", "09:00", "12:00", "13:00", "18:00", "01:00", "", "", "09:00", "12:00", "16:00", "18:00", "", "", "", "09:00", "12:00", "16:00", "18:00", "", "", ""];
+localStorage.setItem("stundennachweis_2026_09_v2", JSON.stringify(septemberImportedData));
+
+buildMonth(9);
+
+document.getElementById("fillDashes").addEventListener("click",()=>{
+  document.querySelectorAll(
+    'tbody input[data-i="ff"], tbody input[data-i="ft"], tbody input[data-i="sf"], tbody input[data-i="st"]'
+  ).forEach(x=>{
+    if(!x.value.trim()) x.value="–";
+  });
+  calc();
+  saveData();
+});
+
+
+document.getElementById("manualSave").addEventListener("click",()=>{
+  saveData();
+  const b=document.getElementById("manualSave");
+  const old=b.textContent;
+  b.textContent="Gespeichert";
+  setTimeout(()=>b.textContent=old,900);
+});
+
+</script></body></html>
