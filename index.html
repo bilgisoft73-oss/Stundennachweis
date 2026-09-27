@@ -320,6 +320,9 @@ h1{font-size:22px;margin:0}.iconbtn,.btn,select,input,textarea{font:inherit}.ico
  .patient-pick{min-width:78px;font-size:12px}
 }
 @media print{.patient-modal{display:none!important}}
+
+.validation-error{display:none;margin-top:10px;padding:11px 12px;border:1px solid #e3a0a0;border-radius:10px;background:#fff0f0;color:#b42318;font-weight:700;font-size:14px;line-height:1.5}
+.validation-error.show{display:block}
 </style>
 
 
@@ -582,6 +585,7 @@ body.login-locked{overflow:hidden!important}
  <div class="calcbox day-total-only"><div>Tagesgesamt<b id="dayTotal">00:00</b></div></div>
  <div style="display:none"><b id="fdTotal">00:00</b><b id="sdTotal">00:00</b><b id="soTotal">00:00</b></div>
  <button class="btn primary" id="saveDay" style="width:100%">Tag speichern</button>
+ <div id="dayValidationError" class="validation-error" role="alert"></div>
 </div></div></div>
 
 
@@ -649,6 +653,21 @@ function calendarPatientNames(o){
   });
   return names;
 }
+function missingPatientOrDescription(o,d){
+ const t=totals(o,d);
+ const missing=[];
+ if(t.fd>0 && !String(o.fdPatientId||"").trim() && !String(o.fdNote||"").trim()) missing.push("FD");
+ if(t.sd>0 && !String(o.sdPatientId||"").trim() && !String(o.sdNote||"").trim()) missing.push("SD");
+ return missing;
+}
+function showDayValidation(o,d){
+ const box=document.getElementById("dayValidationError");
+ if(!box) return;
+ const missing=missingPatientOrDescription(o,d);
+ if(!missing.length){ box.textContent=""; box.classList.remove("show"); return; }
+ box.innerHTML=missing.map(sh=>`${sh}: Bitte Patient oder Beschreibung eingeben.`).join("<br>");
+ box.classList.add("show");
+}
 function render(){
  calendar.innerHTML=""; monthSelect.value=month;
  let first=new Date(Date.UTC(year,month,1)); let offset=(first.getUTCDay()+6)%7; let last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
@@ -661,7 +680,8 @@ function render(){
    if(dt.getUTCDay()===0)el.classList.add("sun"); if(holidays2026.includes(iso))el.classList.add("holiday");
    const hasEntered=Object.values(o).some(v=>String(v||"").trim()!=="");
    const missingPause=t.total>300 && !(mins(o.pause)>0);
-   if(hasEntered){ el.classList.add(missingPause?"invalid":"valid"); }
+   const missingInfo=missingPatientOrDescription(o,d).length>0;
+   if(hasEntered){ el.classList.add((missingPause||missingInfo)?"invalid":"valid"); }
    const patientNames=calendarPatientNames(o);
    el.innerHTML=`<div class="num">${d}</div><div class="hours">${t.total?fmt(t.total):""}</div>${patientNames.length?`<div class="patient-day-names">${patientNames.join("<br>")}</div>`:""}`;
    el.onclick=()=>openDay(d);calendar.appendChild(el);
@@ -678,7 +698,10 @@ function openDay(d){
    const pick=document.querySelector(`.patient-pick[data-shift="${sh}"]`);
    if(pick) pick.textContent=(p?p.name:"Patient")+" ▾";
  });
- recalcEditor(); sheet.classList.add("open");
+ recalcEditor();
+ const validationBox=document.getElementById("dayValidationError");
+ if(validationBox){validationBox.textContent="";validationBox.classList.remove("show");}
+ sheet.classList.add("open");
 }
 function recalcEditor(){
  let o={};document.querySelectorAll("[data-f]").forEach(x=>o[x.dataset.f]=x.value);
@@ -710,6 +733,7 @@ async function saveCurrentDay(showError=true){
     await saveWorkEntry(d,o,y,m);
     db[`${y}-${pad(m+1)}-${pad(d)}`]=o;
     render();
+    if(showError) showDayValidation(o,d);
     return true;
   }catch(e){
     if(showError) alert("Speichern fehlgeschlagen: "+e.message);
